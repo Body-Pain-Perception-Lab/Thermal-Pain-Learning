@@ -1,0 +1,17 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+osf/
+Analysis/Models/
+*.nii
+matlab/Anno/
+matlab/VBQ/VBQ_thermosensory/
+
+manuscripts/discarded/
+manuscripts/Knitting files/discarded/
+discarded/
+scripts/discarded/
+matlab/discarded/
+Markdowns/discarded/
+Markdowns/discarded/

@@ -1,0 +1,37 @@
+function plot_means_kappa(u1, sim)
+subplot(3,3,1)
+omegat2 = pp_check_kap(u1,sim,tapas_hgf_binary_kappasd01_config, tapas_hgf_binary_pu_tgi_config_test_optimal)
+m1 = round(mean(omegat2),3)
+s1 = round(std(omegat2),3)
+title("0.1      "+"mean = "+ m1 + "              sd ="+ s1)
+
+subplot(3,3,2)
+omegat0 = pp_check_kap(u1,sim,tapas_hgf_binary_kappasd02_config, tapas_hgf_binary_pu_tgi_config_test_optimal)
+m1 = round(mean(omegat0),3)
+s1 = round(std(omegat0),3)
+title("0.2      "+"mean = "+ m1 + "              sd ="+ s1)
+
+subplot(3,3,3)
+omegatm2 = pp_check_kap(u1,sim,tapas_hgf_binary_kappasd05_config, tapas_hgf_binary_pu_tgi_config_test_optimal)
+m1 = round(mean(omegatm2),3)
+s1 = round(std(omegatm2),3)
+title("0.5      "+"mean = "+ m1 + "              sd ="+ s1)
+
+subplot(3,3,4)
+omegatm4 = pp_check_kap(u1,sim,tapas_hgf_binary_kappasd1_config, tapas_hgf_binary_pu_tgi_config_test_optimal)
+m1 = round(mean(omegatm4),3)
+s1 = round(std(omegatm4),3)
+title("1      "+"mean = "+ m1 + "              sd ="+ s1)
+
+subplot(3,3,5)
+omegatm5 = pp_check_kap(u1,sim,tapas_hgf_binary_kappasd2_config, tapas_hgf_binary_pu_tgi_config_test_optimal)
+m1 = round(mean(omegatm5),3)
+s1 = round(std(omegatm5),3)
+title("2      "+"mean = "+ m1 + "              sd ="+ s1)
+
+subplot(3,3,6)
+omegatm5 = pp_check_kap(u1,sim,tapas_hgf_binary_kappasd3_config, tapas_hgf_binary_pu_tgi_config_test_optimal)
+m1 = round(mean(omegatm5),3)
+s1 = round(std(omegatm5),3)
+title("3      "+"mean = "+ m1 + "              sd ="+ s1)
+

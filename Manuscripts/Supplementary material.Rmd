@@ -1,0 +1,382 @@
+---
+title: "Supplementary material"
+output:
+  word_document:
+    reference_docx: Knitting files/docx_template.docx
+  pdf_document:
+      latex_engine: xelatex
+  html_document: default
+always_allow_html: yes
+---
+
+<!-- Please note that the packages for making the excel tables from flextable "YesSiR" needs to be installed with the following commands: -->
+<!-- install.packages("devtools") -->
+<!-- devtools::install_github("Sebastien-Le/YesSiR") -->
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+knitr::opts_chunk$set(dpi=300)
+
+# seed
+set.seed(123)
+# packages
+
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load("renv", "here", "knitr","yaml")
+
+knitr::opts_chunk$set(echo = TRUE)
+
+#renv::restore(project=here::here())
+
+if(!require(YesSiR)){
+  remotes::install_github("Sebastien-Le/YesSiR")
+
+}
+
+required_packages = c("cowplot","magick","tidyverse","flextable","YesSiR")
+
+lapply(required_packages, library, character.only = TRUE)
+detach("package:renv", unload = T)
+```
+
+<a id="Supplementary_Results"></a>
+
+### **Supplementary Results**
+
+```{r Load data,echo = FALSE}
+source(here::here("scripts","utils.R"))
+base::load(here::here("Manuscripts", "Workspace", "reporting_statistics_supplementary.RData"))
+
+base::load(here::here("Manuscripts","Workspace","tables_for_supplementary.RData"))
+```
+
+We investigated how response times were affected in trials subsequent to a thermal grill stimulus. Our findings revealed a significant influence of the interaction between cue-stimulus association and participants' perception of TGI quality (`r make_new_reporting(stats_percieved_TGI_PRT_contingency_cold,number = 3, Z = F)`). Specifically,when there was a congruence between the predicted temperature (contingency) and the actual perceived TGI quality (e.g., anticipating cold and perceiving the TGI as predominantly cold), participants' response times on the trial following a TGI stimulus remained unchanged, indicating no post-TGI slowing (`r make_new_reporting(stats_percieved_TGI_PRT_contingency_cold,number = 1, Z = F)`). Conversely, when there was a mismatch between the predicted temperature and perceived TGI quality (for instance, expecting warm but perceiving TGI as predominantly cold), participants exhibited slower response times in the subsequent trial (`r make_new_reporting(stats_percieved_TGI_PRT_contingency_warm,number = 1, Z = F)`). Further details can be found in the supplementary tables.
+
+\newpage
+
+
+### **Supplementary Note**
+
+<a id="Supplementary Note"></a>
+
+#### **Formulation of reported models**
+
+We analyzed three types of responses: (1) binary choices, which determined if a participant predicted a cold or a warm stimulus, (2) response times associated with these binary choices and (3) VAS ratings, which reflected how a received stimulus was perceived by a participant. Here, we detail the  probability distribution of each response type, as well as the parameters upon which our regression analysis is based.
+
+To analyze the binary choices, we used the binomial distribution which is given by:
+$$
+f(y|\mu)=\frac{\Gamma(n+1)}{\Gamma(y+1) \Gamma{(n-y+1)}} \mu^y (1-\mu)^{(n-y)}
+$$
+Where $\Gamma$ is the gamma function, y is the random variable of n successes (restricted to integer values) and $\mu \in [0,1]$ is the probability of a given success. Here we parameterize $\mu$ using the logit link function (the inverse sigmoid transformation) $logit(\mu) = log(\frac{\mu}{1-\mu})$.
+
+<br>
+
+To analyze  response times, we used the gamma distribution given by:
+$$
+f(y|\mu,\sigma)=\frac{y^{(1/\sigma^2-1)}e^{[-y/(\sigma^2 \mu)]}}{(\sigma^2 \mu)^{(1/\sigma^2)} \Gamma(1/\sigma^2)}
+$$
+
+Where $\Gamma$ is the gamma function, y is the random variable of response times (restricted to positive values), $\mu \in ]0,\inf[$ is the mean of the distribution and $\sigma \in ]0,\inf[$ is the square root of the usual dispersion parameter for a GLM gamma model. $\sigma * \mu$ is the standard deviation of the defined distribution.
+Here we parameterize $\mu$ using the logarithmic link function.
+
+<br>
+
+To analyze Visual analog scale (VAS) ratings, we used the zero one inflated beta (ZOIB) distribution, which is a mixture of two Bernoulli distributions and one beta distribution, formally given by: 
+$$
+beinf(y|p_0,p_1,\mu,\phi) = \begin{cases}
+      p_0 & y = 0 \\
+      f(y|\mu,\phi) & y \in [0,1] \\
+      p_1 & y = 1 
+   \end{cases}
+$$
+
+where the probability density function of the beta distribution $f(y;\mu,\phi)$ is given by
+
+$$
+f(y;\mu,\phi) = \frac{\Gamma(\alpha+\beta)}{\Gamma(\alpha)\Gamma(\beta)}y^{\alpha-1}(1-y)^{\beta-1},y\in [0,1]
+$$
+
+In the GAMLSS packages, the parameters are parameterized as follows:
+
+$$ 
+\mu = \frac{\alpha}{\alpha+\beta}
+$$
+
+$$
+\sigma = \frac{1}{\alpha+\beta+1}
+$$
+
+$$
+\tau = \frac{p_0}{p_2}
+$$
+
+$$
+\nu = \frac{p_1}{p_2}
+$$ 
+where $p_2 = 1-p_0-p_1$. All these given parameters $\mu$, $\sigma$, $\tau$ and $\nu$ are restricted between 0 and 1, and are modelled using the logit link function.
+
+\newpage
+
+#### **Formulation of the Uncertainty Modulation of TGI Index**
+
+To provide a thorough understanding of the subject specific Uncertainty Modulation index parameter (UMTI), here we present the detailed mathematical formulation of the model. This formulation is written using the lmer syntax, as detailed below.
+
+$$
+Burning_i \sim Est_i * Stim_i + Trial_i + (Est * Stim | ID), 
+$$
+$$
+family = beinf(\mu_i,\tau_i,\nu_i,\kappa)
+$$
+Considering the number of parameters that have been parameterized, our primary focus in this section is on the mean. However, it is important to note that this approach is equally applicable to the parameters representing the proportion of ones and zeros (i.e., $\nu$ & $\tau$). The mathematical description, specifically tailored to address only the mean, is as follows:
+$$
+Burning_i \sim beinf(\mu_i,\tau,\nu,\kappa)
+$$
+
+$$
+u_{i,j} = \beta_{0_J} + \beta_{4} * Est_{i_j} + \beta_{5} * Stim_{i_j}  + \beta_6 * Trial_i + \beta_{1_J} * (Est_{i_j} * Stim(cold)_{i_j})+ \beta_{2_J} * (Est_{i_j} * Stim(warm)_{i_j})+ \beta_{3_J} * (Est_{i_j} * Stim(TGI)_{i_j}) 
+$$
+
+Now, we present the structure of the random effects, illustrated through the variance-covariance matrix. Here, we exclude the upper triangle of the matrix to avoid redundancy.
+
+
+$$
+\begin{pmatrix}
+\beta_{0_J} \\ 
+\beta_{1_J} \\ 
+\beta_{2_J} \\ 
+\beta_{3_J}
+\end{pmatrix}
+\sim
+\mathcal{N}
+\left(
+\begin{pmatrix}
+\mu_{\beta_0} \\ 
+\mu_{\beta_1} \\ 
+\mu_{\beta_2} \\ 
+\mu_{\beta_3}
+\end{pmatrix},
+\begin{bmatrix}
+\sigma_{\beta_0}^2 & . & . & . \\
+\sigma_{\beta_0} \sigma_{\beta_1} \rho_1 & \sigma_{\beta_1}^2 & . & . \\
+\sigma_{\beta_0} \sigma_{\beta_2} \rho_2 & \sigma_{\beta_1} \sigma_{\beta_2} \rho_4 & \sigma_{\beta_2}^2 & . \\
+\sigma_{\beta_0} \sigma_{\beta_3} \rho_3 & \sigma_{\beta_1} \sigma_{\beta_3} \rho_5 & \sigma_{\beta_2} \sigma_{\beta_3} \rho_6 & \sigma_{\beta_3}^2
+\end{bmatrix}
+\right)
+$$
+
+
+In this analysis, the parameter estimate of interest (i.e., UMTI) is $\beta_{3_j}$, which is the beta estimate for the j-th participant ID. This estimate specifically denotes the interaction term, which quantifies the degree to which estimation uncertainty influences the participant's response to the TGI , compared to their response to cold and warm stimuli. Positive values of $\beta_{3_j}$ suggest that a participant exhibits an increased tendency to rate the sensation as more 'burning' under TGI stimulus conditions, relative to either cold or warm stimuli, as estimation uncertainty increases. It is important to note that this effect is distinct from the direct stimulus effect of the TGI; it represents the differential impact of estimation uncertainty on burning ratings across stimulus types.
+
+\newpage
+<!-- ### **Supplementary Table**  -->
+
+<!-- #### **Error rates for expectedness of stimulus** {#Table_1a} -->
+```{r Table_1a, warning = F, message = F, echo = F}
+# table_pred_acc
+
+exportxlsx(table_pred_acc, path = here::here("Manuscripts","tables as xlsx","table_pred_acc.xlsx"))
+
+```
+
+<!-- \newpage #### **Prediction Response time for expectedness of stimulus**{#Table_1b} -->
+```{r Table_1b, warning = F, message = F, echo = F}
+# table_pred_RT
+
+exportxlsx(table_pred_RT, path = here::here("Manuscripts","tables as xlsx","table_pred_RT.xlsx"))
+```
+
+
+<!-- \newpage #### **Main effect of TGI vs. cold and warm on burning ratings**{#Table_2a} -->
+```{r Table_2a, warning = F, message = F, echo = F}
+# table_main_TGI
+
+exportxlsx(table_main_TGI, path = here::here("Manuscripts","tables as xlsx","table_main_TGI.xlsx"))
+```
+
+<!-- \newpage #### **Main effect of cold ratings**{#Table_2b} -->
+```{r Table_2b, warning = F, message = F, echo = F}
+# table_main_cold
+
+exportxlsx(table_main_cold, path = here::here("Manuscripts","tables as xlsx","table_main_cold.xlsx"))
+```
+
+<!-- \newpage #### **Main effect on Warm ratings**{#Table_2c} -->
+```{r Table_2c, warning = F, message = F, echo = F}
+# table_main_warm
+
+exportxlsx(table_main_warm, path = here::here("Manuscripts","tables as xlsx","table_main_warm.xlsx"))
+```
+
+<!-- \newpage #### **Innocuous thermosensation is shaped by expectations**{#Table_2d} -->
+```{r Table_2d, warning = F, message = F, echo = F}
+# table_inncous_expect
+
+exportxlsx(table_inncous_expect, path = here::here("Manuscripts","tables as xlsx","table_inncous_expect.xlsx"))
+```
+
+<!-- \newpage #### **Accuracy on following trial given the percept of TGI and cue-contingency**{#Table_2e} -->
+```{r Table_2e, warning = F, message = F, echo = F}
+# table_predacc_int
+
+exportxlsx(table_predacc_int, path = here::here("Manuscripts","tables as xlsx","table_predacc_int.xlsx"))
+```
+
+<!-- \newpage #### **Prediction response time on following trial given the percept of TGI and cue-contingency**{#Table_2f} -->
+```{r Table for prediction reaction time for TGI, warning = F, message = F, echo = F}
+# table_predrt_int
+
+exportxlsx(table_predrt_int, path = here::here("Manuscripts","tables as xlsx","table_predrt_int.xlsx"))
+```
+
+<!-- \newpage #### **Accuracy HGF**{#Table_3a} -->
+```{r Table_3a, warning = F, message = F, echo = F}
+# table_acc_hgf
+
+exportxlsx(table_acc_hgf, path = here::here("Manuscripts","tables as xlsx","table_acc_hgf.xlsx"))
+```
+
+<!-- \newpage #### **Prediction Response time HGF**{#Table_3b} -->
+```{r Table_3b, warning = F, message = F, echo = F}
+# table_rt_hgf
+
+exportxlsx(table_rt_hgf, path = here::here("Manuscripts","tables as xlsx","table_rt_hgf.xlsx"))
+```
+
+<!-- \newpage #### **Belief towards cold on stimulus and rating scale**{#Table_4a} -->
+```{r Table_4a, warning = F, message = F, echo = F}
+# table_expectation_HGF
+
+exportxlsx(table_expectation_HGF, path = here::here("Manuscripts","tables as xlsx","table_expectation_HGF.xlsx"))
+```
+
+<!-- \newpage #### **Estimation uncertainty on Burning Ratings**{#Table_4b} -->
+```{r Table_4b, warning = F, message = F, echo = F}
+# table_sa2_burn_hgf
+
+exportxlsx(table_sa2_burn_hgf, path = here::here("Manuscripts","tables as xlsx","table_sa2_burn_hgf.xlsx"))
+```
+
+<!-- Combine tables -->
+```{r Combine tables, warning = F, message = F, echo = F}
+# table_sa2_burn_hgf
+tables = list.files(here::here("Manuscripts","tables as xlsx"), full.names = T)[2:length(list.files(here::here("Manuscripts","tables as xlsx"), full.names = T))]
+fulltable = data.frame()
+
+for(table in tables){
+
+  model = readxl::read_xlsx(table) %>% 
+    mutate(model = str_split(table,"/")[[1]][length(str_split(table,"/")[[1]])])
+  
+  fulltable = rbind(fulltable,model)
+}
+
+writexl::write_xlsx(fulltable, path = here::here("Manuscripts","tables as xlsx","full_combined_table.xlsx"))
+```
+
+
+### **Multi-Parameter Mapping**
+
+In our initial analysis, we identified correlations between multi-parameter maps and the computational parameters of interest using a traditional cluster-based inference approach. This approach applied a family-wise error (FWE) cluster-corrected threshold of p < 0.025 (Bonferroni-corrected for two one-tailed tests), with an inclusion threshold of p < 0.001 (uncorrected) within the gray matter mask. The regression model included the computational parameters omega, zeta, and UMTI, along with age, gender, and total intracranial volume (TIV) as nuisance covariates. These results were initially reported in the preprint version of the manuscript (version 1) and are available online (link to be provided).
+
+In response to a reviewer’s suggestion, we updated the model to include TGI responsiveness as an additional regressor of interest. For this updated analysis, we performed both the original traditional cluster-based inference and Threshold-Free Cluster Enhancement (TFCE). Given that TFCE offers key advantages over traditional methods—such as enhanced sensitivity to subtle effects and the avoidance of arbitrary cluster-forming thresholds—we updated the main manuscript’s methods and results sections to reflect the findings obtained using TFCE. Nevertheless, for completeness and comparison, we also provide the results from the traditional cluster-based inference method in an online repository (link to be provided).
+
+
+\newpage
+
+
+### **Supplementary Figures**{#Supplementary_Figures_1_8}
+
+To ensure the robustness of our models, we conducted parameter recovery analysis. This analysis revealed that the 3-level Hierarchical Gaussian Filter model and the modified Pearce Hall model could not adequately recover all the parameters governing the learning trajectories. Consequently, these models were not included in neither model comparison nor model selection.
+
+The parameter recovery analysis demonstrated that the 2-level HGF, the Rescorla Wagner, the Sutton k1 and the pearce hall learning models successfully recovered their respective parameters with acceptable precision. However, the 3-level HGF and the modified pearce hall failed to recover particular parameters, making it unsuitable for further analysis in this context. The outcomes of the parameter recovery were then utilized to establish suitable priors for subsequent model recovery analyses. For further details, including comprehensive plots that illustrate the evaluation of the priors used in our simulations, readers are directed to the [Shiny app](#https://github.com/Body-Pain-Perception-Lab/Thermal-Pain-Learning/tree/main/Shiny) in the GitHub repository linked to this study.
+
+Note we display $\mathcal{N}(\mu,\sigma^2)$ as the HGF toolbox. All parameters were simulated from a uniform distribution in the range seen in the plot below. Note the parameter-recovery figures for $\zeta$ are cropped at y = 30, Few simulations estimated $\zeta$ to values above 50 which are not shown in the scatter plot, but included in the correlation coefficient reported in the figure. Priors for each of the models were transformed to obey their constraints, meaning that parameters on the unit interval where sigmoid transformed and positively constrained parameters exponentiated.
+
+#### **Fig S1: Parameter recovery analysis of the 2-level Hierarchical Gaussian Filter learning model.**
+
+```{r HGF_2level, fig.width = 7.2, fig.height = 3.6, warning = F, message = F, echo = F, fig.cap = "X-axis presenting the simulated values and the y-axis being the estimated / recovered value. Priors for both parameters, $\\omega \\sim \\mathcal{N}(-3,16)$ and $\\zeta \\sim \\mathcal{N}(5,3)$"}
+ggdraw() +
+    draw_image(magick::image_read(here::here("Figures","supplementary_pr_hgf2.png")), scale = 1)
+```
+
+\newpage 
+
+#### **Fig S2: Parameter recovery analysis of the Rescorla-Wagner learning model.**
+
+```{r RW, fig.width = 7.2, fig.height = 3.6, warning = F, message = F, echo = F, fig.cap = "X-axis presenting the simulated values and the y-axis being the estimated / recovered value. Priors both parameters, $\\alpha \\sim  \\mathcal{N}(0,2)$ and $\\zeta \\sim  \\mathcal{N}(5,3)$"}
+ggdraw() +
+    draw_image(magick::image_read(here::here("Figures","supplementary_pr_rw.png")), scale = 1)
+
+```
+
+
+\newpage 
+
+#### **Fig S3: Parameter recovery analysis of the Sutton K1 learning model.**
+
+```{r SU1, fig.width = 7.2, fig.height = 3.6, warning = F, message = F, echo = F, fig.cap = "X-axis presenting the simulated values and the y-axis being the estimated / recovered value. Priors for both parameters, $\\mu \\sim  \\mathcal{N}(3,10)$ and $\\zeta \\sim  \\mathcal{N}(5,3)$"}
+ggdraw() +
+    draw_image(magick::image_read(here::here("Figures","supplementary_pr_su.png")), scale = 1)
+```
+
+
+\newpage 
+
+#### **Fig S4: Parameter recovery analysis of the pearce hall learning model.**
+
+```{r pearcehall, fig.width = 7.2, fig.height = 3.6, warning = F, message = F, echo = F, fig.cap = "X-axis presenting the simulated values and the y-axis being the estimated / recovered value. Priors for both parameters, $S \\sim  \\mathcal{N}(0,2)$ and $\\zeta \\sim  \\mathcal{N}(5,3)$."}
+ggdraw() +
+    draw_image(magick::image_read(here::here("Figures","supplementary_pr_ph.png")), scale = 1)
+```
+
+
+\newpage
+
+#### **Fig S5: Parameter recovery analysis of the 3-level Hierarchical Gaussian Filter learning model.**
+
+```{r HGF, fig.width = 7.2, fig.height = 7.2, warning = F, message = F, echo = F, fig.cap = "X-axis presenting the simulated values and the y-axis being the estimated / recovered value. Priors for all parameters, $\\omega \\sim \\mathcal{N}(-3,16)$ and $\\zeta \\sim \\mathcal{N}(5,3)$, $\\theta \\sim  \\mathcal{N}(-6,16)$ and $\\kappa \\sim  \\mathcal{N}(1,1)$. Due to the very poor recovery of the third level parameters i.e. $\\kappa$ and $\\theta$ the 3-level HGF model was not used in model comparison."}
+ggdraw() +
+    draw_image(magick::image_read(here::here("Figures","supplementary_pr_hgf.png")), scale = 1)
+```
+
+
+\newpage
+
+#### **Fig S6: Parameter recovery analysis of the modified pearce hall learning model.**
+
+```{r ModPH, fig.width = 7.2, fig.height = 7.2, warning = F, message = F, echo = F, fig.cap = "X-axis presenting the simulated values and the y-axis being the estimated / recovered value. Priors for all parameters, $\\kappa \\sim \\mathcal{N}(0,2)$ and $\\zeta \\sim \\mathcal{N}(5,3)$, $\\eta \\sim  \\mathcal{N}(0,2)$. Due to the very poor recovery of the $\\kappa$ parameters the modified pearce hall model was not used in model comparison."}
+ggdraw() +
+    draw_image(magick::image_read(here::here("Figures","supplementary_pr_ph1.png")), scale = 1)
+```
+
+
+
+\newpage
+
+#### **Fig S7: Model recovery analyses.**
+
+```{r Model recovery, fig.width = 5, fig.height = 5, warning = F, message = F, echo = F, fig.cap = ""}
+
+model_recovery 
+```
+Columns are which model was used as the generate model and rows are which model best described the data in log model evidence. As can be seen from the table, the models were distinguishable (i.e., when using a specific generate model, that model would also outperform the other models in most cases), which is evident from the high values of the diagonal of the plot.
+
+**Priors used for the model recovery:**
+
+- **HGF:** ω ~ N(-4,6) & ζ ~ N(5,2)
+- **Rescorla Wagner:** α ~ N(0,1) & ζ ~ N(5,3)
+- **Sutton k1:** μ ~ N(3,10) & ζ ~ N(5,3)
+- **Pearce Hall (PH):** S ~ N(0,1) & ζ ~ N(5,3)
+
+
+
+\newpage
+
+#### **Fig S8: Model selection analysis using random-effects on log model evidence.**
+
+```{r Model selection, fig.width = 7.2, fig.height = 5, warning = F, message = F, echo = F, fig.cap = "The Hierarchical Gaussian Filter outperformed the fixed learning rate model, Rescorla–Wagner, the variable-learning-rate non-Bayesian model Sutton K1 and the dynamic learning rate based on associability Pearce-Hall."}
+ggdraw() +
+    draw_image(magick::image_read(here::here("Figures","supplementary_model_comparison.png")), scale = 1)
+
+```

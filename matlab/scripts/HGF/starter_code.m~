@@ -1,0 +1,19 @@
+
+
+dataFile = load('HGFwksh_CWT_multsub_noise.mat');
+u = dataFile.u(:,1);
+
+p_prc = [NaN 0 1 NaN 1 1 NaN 0 0 1 1 NaN -2.5 -6];
+% b0, b1
+p_rsp = [0, 0, 0, 0, 0, 5];
+
+
+config_prc = tapas_ehgf_binary_pu_config;
+
+% 1. simulate data
+sim = tapas_simModel(u,...
+                     'tapas_ehgf_binary_pu',...
+                     config_prc.priormus,...
+                     'rt_RT',...
+                     p_rsp);
+                 

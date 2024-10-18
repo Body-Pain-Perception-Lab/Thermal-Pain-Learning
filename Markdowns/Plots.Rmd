@@ -1,0 +1,118 @@
+---
+title: "plots"
+author: "Jesper Fischer Ehmsen"
+date: "`r Sys.Date()`"
+output:
+  word_document: default
+  html_document: default
+---
+
+This markdown document contains the code to generate the figures featured in the Manuscript.
+
+<!-- Please note that the packages for making the excel tables from flextable "YesSiR" needs to be installed with the following commands: -->
+<!-- install.packages("devtools") -->
+<!-- devtools::install_github("Sebastien-Le/YesSiR") -->
+
+```{r}
+# Load necessary libraries
+
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load("renv", "here", "knitr")
+
+knitr::opts_chunk$set(echo = TRUE)
+
+#renv::restore(project=here::here())
+
+required_packages = c("tidyverse", "gamlss", "glmmTMB", "gghalves", "ggtext", "osfr", "scales","cowplot","flextable","ggeffects","grid","magick","patchwork","png",
+"YesSiR","ggh4x","readr")
+
+lapply(required_packages, library, character.only = TRUE)
+detach("package:renv", unload = T)
+
+```
+
+```{r}
+# Source additional scripts for plotting and utilities
+source(here::here("scripts","plots.R"))
+source(here::here("scripts","utils.R"))
+
+
+# Get data
+data <- get_data(rerun = FALSE)
+df <- data$data
+
+# Get HGF trajectories
+trajfeel2 = get_hgf(df, rerun = F)
+```
+
+# Figure 1: Overview of experimental design and behavioural measures related to thermosensory learning
+
+```{r, fig.height=7.2, fig.width=7.2}
+plot1 = plot1(df)
+plot1
+ggsave(here::here("Figures","figure1.png"), plot = plot1, dpi = 600)
+```
+
+# Figure 2: Thermosensory ratings and impact of expectations on temperature and TGI perception
+
+```{r, fig.height=7.2, fig.width=7.2}
+plot2 = plot2(df)
+plot2
+ggsave(here::here("Figures","figure2.png"), plot = plot2, dpi = 600)
+```
+
+# Figure 3: Perceptual and response model
+
+```{r, fig.height=7.2, fig.width=7.2}
+source(here::here("scripts","plots.R"))
+source(here::here("scripts","utils.R"))
+plot3 = plot3(trajfeel2)
+plot3
+ggsave(here::here("Figures","figure3.png"), plot = plot3, dpi = 600)
+```
+
+# Figure 4
+
+```{r, fig.height=7.2, fig.width=7.2}
+source(here::here("scripts","plots.R"))
+
+plot_4 = plot4_v2(trajfeel2)
+plot_4
+ggsave(here::here("Figures","figure4.png"), plot = plot_4, dpi = 600)
+```
+
+# Table 1: Computational correlates of MT weighted images:
+
+```{r}
+source(here::here("scripts","plots.R"))
+source(here::here("scripts","utils.R"))
+
+table1 = draw_table_main()
+table1[[1]]
+table1[[2]]
+
+draw_table_supplementary()
+```
+
+# Figure 5: Computational neuroanatomy of the Thermal Grill Illusion
+
+```{r, fig.height=7.2, fig.width=7.2}
+# source(here::here("scripts","plots.R"))
+# source(here::here("scripts","utils.R"))
+# 
+# plot5 = plot5(R = TRUE)
+# plot5 
+# ggsave(here::here("Figures","figure5.png"), plot = plot5, dpi = 600)
+```
+
+```{r,fig.height=6.4, fig.width=7.2}
+# source(here::here("scripts","plots.R"))
+# source(here::here("scripts","utils.R"))
+# 
+# plot5 = plot5_v2()
+# plot5 
+# ggsave(here::here("Figures","figure5.png"), plot = plot5, dpi = 600)
+
+```
+
+

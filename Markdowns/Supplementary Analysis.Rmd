@@ -1,0 +1,313 @@
+---
+title: "Supplementary Material"
+author: "Jesper Fischer Ehmsen"
+date: "`r Sys.Date()`"
+output:
+  word_document: default
+  html_document: default
+---
+
+This markdown script is to run the TPL Supplementary analysis which is presented in TPL Supplementary material and manuscript.
+
+
+# Supplementary material
+
+```{r load functions for supplementary material}
+# seed
+set.seed(123)
+# packages
+
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load("renv", "here", "knitr","yaml")
+
+knitr::opts_chunk$set(echo = TRUE)
+
+required_packages = c("rmarkdown","tidyverse","broom","DHARMa","flextable","gamlss",
+                      "glmmTMB", "patchwork","reshape2")
+
+lapply(required_packages, library, character.only = TRUE)
+detach("package:renv", unload = T)
+
+```
+
+
+```{r load functions for supplementary material}
+#getting data:
+source(here::here("scripts","utils.R"))
+
+#extract data:
+data = get_data(rerun = FALSE)
+df = data$data
+source(here::here("scripts","supplementary_functions.R"))
+source(here::here("scripts","plots.R"))
+
+```
+
+
+```{r Download models from OSF}
+# Retrieve the OSF authentication token if the file exists
+osf_file_path <- here::here("osf","osf.txt")
+
+if (file.exists(osf_file_path)) {
+  osf_token <- read_lines(osf_file_path)[1]
+} else {
+  stop("OSF token file does not exist!")
+}
+
+get_models(osf_token)
+
+models = list.files(here::here("Analysis","Models"), full.names = T)
+for(model in models){
+  load(model)
+}
+```
+
+
+# Supplementary material 1
+
+## Model tables
+
+```{r Accuracy models}
+source(here::here("scripts","plots.R"))
+source(here::here("scripts","supplementary_functions.R"))
+
+table_pred_acc = get_main_tables(model_ER_expected,
+          2)%>% 
+      set_caption(caption = " ") %>%  #this is above the table
+  add_footer_lines("Table 1a, Main effect of expectation on predicting the next stimulus.") #this is below
+
+table_pred_RT = get_main_tables(model_PRT_expected,
+          2)%>% 
+      set_caption(caption = " ") %>%  #this is above the table
+  add_footer_lines("Table 1b, Main effect of expectation on Response time of the next stimulus.") #this is below
+
+
+table_main_TGI = get_main_tables(model_BURN_stim,
+          2)%>% 
+      set_caption(caption = " ") %>%  #this is above the table
+  add_footer_lines("Table 2a, Main effect of stimulus on burning ratings.") #this is below
+
+
+table_main_cold = get_main_tables(model_COLD_stim,
+          2)%>% 
+      set_caption(caption = " ") %>%  #this is above the table
+  add_footer_lines("Table 2b, Main effect of stimulus on cold ratings.") #this is below
+
+
+table_main_warm = get_main_tables(model_WARM_stim,
+          2)%>% 
+      set_caption(caption = " ") %>%  #this is above the table
+  add_footer_lines("Table 2c, Main effect of stimulus on warm ratings.") #this is below
+
+
+table_inncous_expect = get_main_tables(model_INNOUOUS_expectation_warm_incon,
+         2)%>% 
+      set_caption(caption = " ") %>%  #this is above the table
+  add_footer_lines("Table 2d, Expectation effect of thermosensory ratings.") #this is below
+
+
+table_predacc_int = get_main_tables(model_percieved_TGI_acc_contingency_cold,
+          2)%>% 
+      set_caption(caption = " ") %>%  #this is above the table
+  add_footer_lines("Table 2e, Effect of percived TGI given contingency on accuracy on next trial") #this is below
+
+
+
+table_acc_hgf = get_main_tables(model_ACC_HGF,
+          2)%>% 
+      set_caption(caption = " ") %>%  #this is above the table
+  add_footer_lines("Table 3a, Effect of prediction uncertainty on accuracy on current trial") #this is below
+
+
+
+table_rt_hgf =get_main_tables(model_PRT_HGF,
+          2)%>% 
+      set_caption(caption = " ") %>%  #this is above the table
+  add_footer_lines("Table 3b, Effect of prediction uncertainty on prediction time on current trial") #this is below
+
+
+table_expectation_HGF = get_main_tables(model_figure4_cold_cold,
+         2)%>% 
+      set_caption(caption = " ") %>%  #this is above the table
+  add_footer_lines("Table 4a, Effect of belief that the next stimulus will be cold on thermosensory ratings") #this is below
+
+
+table_sa2_burn_hgf  = get_main_tables(model_individual_dif_sa2_burn_HGF_sigma,
+          2)%>% 
+      set_caption(caption = " ") %>%  #this is above the table
+  add_footer_lines("Table 4c, Effect of estimation uncertainty given stimulus on burning ratings") #this is below
+
+```
+
+
+# Supplementary 2
+## How the TGI is felt influence the prediction reaction time on next trial in correspondence with the cue and probability block
+
+```{r RTs on trial following TGI based on cue-predictability}
+df$predRT2 = lead(df$predRT,1)
+
+df_percieved_TGI_PRT = df %>% group_by(stim,id,trial) %>% 
+  summarize(coolness = vasResp_1/(vasResp_1+vasResp_2), warmness = vasResp_2/(vasResp_1+vasResp_2)) %>% 
+  inner_join(df) %>% 
+  mutate(stim = as.factor(stim),id = as.factor(id), desired_prob = as.factor(desired_prob)) %>% 
+  dplyr::select(predRT2, coolness,cue,desired_prob,trial,id)%>% 
+  filter(stim == "TGI", desired_prob != "0.5")%>% 
+  mutate(cue = as.factor(cue)) %>% 
+  drop_na() %>% 
+  mutate(contingency = as.factor(ifelse(desired_prob == "0.82" & cue == "high-tone" | desired_prob == "0.18" & cue == "low-tone","Predicts cold","Predicts warm"))) %>% 
+  filter(predRT2 > 0.1)
+
+df_percieved_TGI_PRT$contingency = relevel(df_percieved_TGI_PRT$contingency, ref = "Predicts cold")
+
+model_percieved_TGI_PRT_contingency_cold <- gamlss::gamlss(predRT2 ~ coolness*contingency+re(random = ~ 1|id),
+                                                           sigma.formula = ~ coolness*contingency+re(random = ~ 1|id),
+                         family = GA(mu.link = "log"),
+                         data = df_percieved_TGI_PRT)
+
+plot(model_percieved_TGI_PRT_contingency_cold)
+
+stats_percieved_TGI_PRT_contingency_cold = summary_stats_zoib_new(model_percieved_TGI_PRT_contingency_cold, coefficients = 3, round = 2, part = "mu")
+
+
+df_percieved_TGI_PRT$contingency = relevel(df_percieved_TGI_PRT$contingency, ref = "Predicts warm")
+
+model_percieved_TGI_PRT_contingency_warm <- gamlss::gamlss(predRT2 ~ coolness*contingency+re(random = ~ 1|id),
+                                                           sigma.formula = ~ coolness*contingency+re(random = ~ 1|id),
+                         family = GA(mu.link = "log"),
+                         data = df_percieved_TGI_PRT)
+
+stats_percieved_TGI_PRT_contingency_warm <- summary_stats_zoib_new(model_percieved_TGI_PRT_contingency_warm, coefficients = 3, round = 2, part = "mu")
+
+
+
+table_predrt_int <- get_main_tables(
+  model_percieved_TGI_PRT_contingency_cold,
+  2
+) %>%
+  set_caption(caption = " ") %>% # this is above the table
+  add_footer_lines("Table 2f, Effect of percived TGI given contingency on prediction response time on next trial") # this is below
+```
+
+
+```{r}
+# Get a list of all variable names that start with "stat_"
+stats_vars <- ls(pattern = "^stats_")
+
+# # Save the variables to a file
+save(list = stats_vars, file = here::here("Manuscripts", "Workspace", "reporting_statistics_supplementary.RData"))
+```
+
+
+
+
+# Supplementary 3
+
+## Parameter and model recovery for the models tested
+
+For the parameter recovery analysis very wide non-informative priors were set for all parameters tested in the models. see below. Here we display the mean and variance as in the HGF toolbox
+HGF parameters
+$\omega \sim  \mathcal{N}(e^{-3},16)$
+$\theta \sim  \mathcal{N}(e^{-6},16)$
+$\kappa \sim  \mathcal{N}(e^{log(1)},1)$
+Rescorla Wagner
+$\alpha \sim  \mathcal{N}(S(0.5),2)$
+Sutton k1
+$\mu \sim  \mathcal{N}(log(3),16)$
+Pearce hall
+$\mu \sim  \mathcal{N}(log(3),16)$
+
+Response model:
+$\beta \sim  \mathcal{N}(log(5),3)$
+
+
+```{r Parameter recovery for the HGF 2level, fig.width = 7.2, fig.height = 3.6, warning = F, message = F, echo = F, fig.cap = " "}
+supplementary_pr_hgf = parameter_recovery("hgf_2level")
+supplementary_pr_hgf
+
+ggsave(here::here("Figures","supplementary_pr_hgf2.png"), plot = supplementary_pr_hgf, width = 7.2, height = 3.6, dpi = 600)
+```
+
+```{r Parameter recovery for the HGF 3level, fig.width = 7.2, fig.height = 7.2, warning = F, message = F, echo = F, fig.cap = " "}
+supplementary_pr_hgf = parameter_recovery("hgf")
+supplementary_pr_hgf
+
+ggsave(here::here("Figures","supplementary_pr_hgf.png"), plot = supplementary_pr_hgf, width = 7.2, height = 7.2, dpi = 600)
+```
+
+```{r Parameter recovery for the Rescorla wagner, fig.width = 7.2, fig.height = 3.6, warning = F, message = F, echo = F, fig.cap = " "}
+supplementary_pr_rw = parameter_recovery("rw")
+supplementary_pr_rw
+ggsave(here::here("Figures","supplementary_pr_rw.png"), plot = supplementary_pr_rw, width = 7.2, height = 3.6, dpi = 600)
+
+```
+
+```{r parameter recovery for the Sutton k1, fig.width = 7.2, fig.height = 3.6, warning = F, message = F, echo = F, fig.cap = " "}
+supplementray_pr_su = parameter_recovery("su1")
+supplementray_pr_su
+ggsave(here::here("Figures","supplementary_pr_su.png"), plot = supplementray_pr_su, width = 7.2, height = 3.6, dpi = 600)
+```
+
+
+```{r parameter recovery for the Pearce hall, fig.width = 7.2, fig.height = 3.6, warning = F, message = F, echo = F, fig.cap = " "}
+supplementray_pr_ph = parameter_recovery("ph")
+supplementray_pr_ph
+ggsave(here::here("Figures","supplementary_pr_ph.png"), plot = supplementray_pr_ph, width = 7.2, height = 3.6, dpi = 600)
+```
+
+
+```{r parameter recovery for the Pearce hall modified, fig.width = 7.2, fig.height = 7.2, warning = F, message = F, echo = F, fig.cap = " "}
+supplementray_pr_ph = parameter_recovery("ph1")
+supplementray_pr_ph
+ggsave(here::here("Figures","supplementary_pr_ph1.png"), plot = supplementray_pr_ph, width = 7.2, height = 7.2, dpi = 600)
+```
+
+
+The parameter recovery showed that the 2 level HGF (only the decision noise $\beta$, and the step size of the second level $\omega$), the rescorla wagner model, the sutton k1 learning model and the simple pearce hall recovered their parameters decently. As can be seen from the plots above it is apparent that only some ranges of the learning parameters are recoverable. The priors for the free parameters were set to the following this was based on investigation of prior predictive checks and the accompanying shiny app:
+
+For the HGF:
+$\omega \sim  exp(\mathcal{N}(-4,3))$
+
+For the Rescorla wagner:
+$\alpha \sim  S(\mathcal{N}(-1,2))$
+
+for the Sutton k1 model:
+$\mu \sim  exp(\mathcal{N}(log(3),3))$
+
+for the Pearce hall model:
+$\mu \sim  S(\mathcal{N}(0,2))$
+
+For the decision noise 
+$\beta \sim  \mathcal{N}(log(5),1)$
+
+
+## Model recovery
+```{r Model recovery for the tested models, fig.width = 5, fig.height = 5, warning = F, message = F, echo = F, fig.cap = "Test"}
+model_recovery = get_model_recovery()
+model_recovery
+```
+
+
+As can be seen from the table the models were distinguishable, that is if responses were simulated from a certain model there would be a high probability that this model was then also the one best describing the data. Columns are which model was simulated from and rows are which model best described the data in log model evidence (LME)
+
+## Model comparison / selection
+
+```{r Model comparison, fig.width = 7.2, fig.height = 5, warning = F, message = F, echo = F, fig.cap = "Test"}
+model_comparison = get_model_comparison()
+model_comparison
+
+ggsave(here::here("Figures", "supplementary_model_comparison.png"), plot = model_comparison, width = 7.2, height = 5, dpi = 600)
+```
+
+Model selection showed that the two level HGF was the model that best described most of the participants' learning behavior.
+
+
+```{r Saving variables for manuscript analysis}
+# Combine the variable names into a single vector
+tables <- ls(pattern = "^table_")
+
+
+vars_to_save <- c(tables,"model_recovery")
+
+# Save the variables to a file
+save(list = vars_to_save, file = here::here("Manuscripts","Workspace","tables_for_supplementary.RData"))
+```

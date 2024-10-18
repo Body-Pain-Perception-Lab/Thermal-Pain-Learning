@@ -1,0 +1,624 @@
+---
+title: "Analysis script for the TPL"
+author: "Jesper Fischer Ehmsen"
+date: "`r Sys.Date()`"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+
+This markdown script is to run the TPL analysis which is presented in TPL_Manuscript.
+
+Note: to run this script you do not need an access token from osf (free to get).
+In order to investigate the models without re-running the analysis you need to download the fitted models from osf. The easiest way to access 
+the models from OSF is to make a new directory called osf and create a txt file named osf.txt. In this file you paste your access token which is what the get_models() function takes as an argument
+
+======================================================================================
+```{r Reading the data}
+# seed
+set.seed(123)
+# packages
+
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load("renv", "here", "knitr")
+
+knitr::opts_chunk$set(echo = TRUE)
+
+#renv::restore(project=here::here())
+
+required_packages = c("rmarkdown","tidyverse","lmerTest","brms","ggeffects",
+                      "gamlss", "DHARMa", "glmmTMB", "cowplot", "scales",
+                      "matlabr","osfr","parameters")
+
+lapply(required_packages, library, character.only = TRUE)
+detach("package:renv", unload = T)
+```
+
+
+```{r Reading the data}
+source(here::here("scripts", "utils.R"))
+source(here::here("scripts", "plots.R"))
+
+# extract data to rerun the analysis
+data <- get_data(rerun = F)
+df <- data$data
+
+```
+
+Optionally one can just download the fitted models from osf. To do this run the follow code with the osf token in a directory called osf.
+
+```{r Download models from OSF}
+# # Retrieve the OSF authentication token if the file exists
+# osf_file_path <- here::here("osf","osf.txt")
+# 
+# if (file.exists(osf_file_path)) {
+#   osf_token <- read_lines(osf_file_path)[1]
+# } else {
+#   stop("OSF token file does not exist!")
+# }
+# 
+# get_models(osf_token)
+# 
+# models = list.files(here::here("Analysis","Models"), full.names = T)
+# for(model in models){
+#   load(model)
+# }
+```
+
+
+Note that the below written chunks are written such that one analysis goes into one chunk. First the data is wrangled to fit the modeling, then the model is provided and fit, the statistics for reporting are saved in the environment and assumption plots are displayed for each analysis.
+
+# Behaviour
+
+## Error rates
+```{r Error rates for expectedness of stimulus}
+# load functions:
+source(here::here("scripts", "utils.R"))
+
+# data for model
+ER_data =  df %>% filter(stim != "TGI") %>% 
+  mutate(predAcc = ifelse(predAcc == "Right", 1, 0)) %>% 
+  dplyr::select(predAcc, expected, trial, id)  %>% mutate(trial = scale(trial)[,1]) %>% 
+  drop_na()
+
+#model
+model_ER_expected <- gamlss::gamlss(predAcc ~ expected + trial + re(random = ~ trial | id),
+  family = BI(mu.link = "logit"),
+  control = gamlss.control(n.cyc = 100, trace = T),
+  data = ER_data
+)
+
+
+model_ER_expected2 <- glmer(predAcc ~ expected + trial + (trial | id),
+  family = binomial(link = "logit"),
+  data = ER_data
+)
+
+#statistics for manuscript
+stats_ER_expected<- summary_stats_zoib_new(model_ER_expected, coefficients = 2, round = 2, part = "mu")
+
+#simulated residuals:
+plot(model_ER_expected)
+
+save(list = "model_ER_expected", file = paste0(here::here("Analysis","Models"),"/","model_ER_expected.Rdata"), compress = TRUE)
+
+base::save(list = "stats_ER_expected", file = here::here("Analysis","Temp", "reporting_statistics_stats_ER_expected.RData"))
+```
+
+## Prediction Reaction time
+```{r Prediction Reaction time for expectedness of stimulus}
+#data wrangling
+df$predRT2 <- lead(df$predRT, 1)
+
+df_rt = df %>% mutate(predRT2 = lead(df$predRT, 1)) %>% 
+  dplyr::select(predRT2,expected,trial,id) %>% 
+  filter(predRT2 > 0.1) %>% mutate(trial = scale(trial)[,1]) %>% 
+  drop_na()
+
+model_PRT_expected <- gamlss::gamlss(predRT2 ~ expected + trial + re(random = ~ 1 | id),
+                                     sigma.formula = ~  expected + trial + re(random = ~ 1 | id),
+  control = gamlss.control(n.cyc = 100, trace = F),
+  family = GA(mu.link = "log"),
+  data = df_rt
+)
+
+#statistics for manuscript
+stats_PRT_expected <- summary_stats_zoib_new(model_PRT_expected, coefficients = 3, round = 2, part = "mu")
+
+# simulated residuals:
+plot(model_PRT_expected)
+
+
+## how about lognormal?
+residual_check(lmerTest::lmer(log(predRT2) ~ expected + trial + (1 | id),
+  data = df
+))
+# how about normal?
+residual_check(lmerTest::lmer((predRT2) ~ expected + trial + (1 | id),
+  data = df
+))
+
+save(list = "model_PRT_expected", file = paste0(here::here("Analysis","Models"),"/","model_PRT_expected.Rdata"), compress = TRUE)
+
+base::save(list = "stats_PRT_expected", file = here::here("Analysis","Temp", "reporting_statistics_stats_PRT_expected.RData"))
+```
+
+# Stimulus-Specific Effects on Thermo sensory and burning-ratings
+## Burning ratings
+```{r Main effect of TGI vs cold and warm on burning ratings}
+df$burnbeta <- df$vasResp_3 / 100
+
+df_burn <- df %>%
+  filter(stim != "NaN") %>%
+  dplyr::select(burnbeta, trial, id, stim) %>%
+  drop_na() %>%
+  mutate(stim = as.factor(stim), id = as.factor(id), trial = scale(trial)[,1])
+
+df_burn$stim <- relevel(df_burn$stim, ref = "TGI")
+
+
+model_BURN_stim <- gamlss(burnbeta ~ stim + trial + re(random = ~ stim  | id),
+  nu.formula = ~ stim + trial + re(random = ~ 1 | id),
+  tau.formula = ~ stim + trial + re(random = ~ 1 | id),
+  sigma.formula = ~ stim + trial + re(random = ~ 1  | id),
+  data = df_burn,
+  family = BEINF(mu.link = "logit", sigma.link = "logit", nu.link = "logit", tau.link = "logit"),
+  control = gamlss.control(n.cyc = 100, trace = T)
+)
+
+
+      
+model_beta <- glmmTMB::glmmTMB(burnbeta ~ stim + trial + (stim|id),
+           family = glmmTMB::beta_family(link = "logit"),
+           data = df_burn %>% filter(burnbeta != 0 & burnbeta != 1))
+
+model_normal <- lmer(brms::logit_scaled(burnbeta) ~ stim + trial + (stim|id),
+  data = df_burn %>% filter(burnbeta != 0 & burnbeta != 1))
+
+
+stats_BURN_stim <- summary_stats_zoib_new(model_BURN_stim, coefficients = 3, round = 2, part = "mu")
+
+
+# simulated residuals:
+plot(model_BURN_stim)
+
+
+residual_check(model_normal)
+
+residual_check(model_beta)
+
+save(list = "model_BURN_stim", file = paste0(here::here("Analysis","Models"),"/","model_BURN_stim.Rdata"), compress = TRUE)
+
+
+base::save(list = "stats_BURN_stim", file = here::here("Analysis","Temp", "reporting_statistics_stats_BURN_stim.RData"))
+```
+
+
+## Cold Ratings
+```{r main effect of cold ratings}
+df$coldbeta <- df$vasResp_1 / 100
+
+df_cold <- df %>%
+  filter(stim != "NaN") %>%
+  dplyr::select(coldbeta, trial, id, stim) %>%
+  drop_na() %>%
+  mutate(stim = as.factor(stim), id = as.factor(id), trial = scale(trial)[,1])
+
+df_cold$stim <- relevel(df_cold$stim, ref = "cold")
+
+model_COLD_stim <- gamlss::gamlss(coldbeta ~ stim + trial + re(random = ~ stim  | id),
+  nu.formula = ~ stim + trial + re(random = ~ 1 | id),
+  tau.formula = ~ stim + trial + re(random = ~ 1 | id),
+  sigma.formula = ~ stim + trial + re(random = ~ 1 | id),
+  data = df_cold,
+  family = BEINF(mu.link = "logit", sigma.link = "logit", nu.link = "logit", tau.link = "logit"),
+  control = gamlss.control(n.cyc = 100, trace = T)
+)
+
+stats_COLD_stim <- summary_stats_zoib_new(model_COLD_stim, coefficients = 3, round = 2, part = "mu")
+
+
+# simulated residuals:
+plot(model_COLD_stim)
+
+save(list = "model_COLD_stim", file = paste0(here::here("Analysis","Models"),"/","model_COLD_stim.Rdata"), compress = TRUE)
+
+
+base::save(list = "stats_COLD_stim", file = here::here("Analysis","Temp", "reporting_statistics_stats_COLD_stim.RData"))
+
+```
+
+## Warm Ratings
+```{r Main effect on Warm ratings}
+df$warmbeta <- df$vasResp_2 / 100
+
+df_warm <- df %>%
+  filter(stim != "NaN") %>%
+  dplyr::select(warmbeta, trial, id, stim) %>%
+  drop_na() %>%
+  mutate(stim = as.factor(stim), id = as.factor(id), trial = scale(trial)[,1])
+
+
+df_warm$stim <- relevel(df_warm$stim, ref = "warm")
+
+
+model_WARM_stim <- gamlss(warmbeta ~ stim + trial + re(random = ~ stim  | id),
+  nu.formula = ~ stim + trial + re(random = ~ 1  | id),
+  tau.formula = ~ stim + trial + re(random = ~ 1 | id),
+  sigma.formula = ~ stim + trial + re(random = ~ 1 | id),
+  data = df_warm,
+  family = BEINF(mu.link = "logit", sigma.link = "logit", nu.link = "logit", tau.link = "logit"),
+  control = gamlss.control(n.cyc = 100, trace = T)
+)
+
+stats_WARM_stim <- summary_stats_zoib_new(model_WARM_stim, coefficients = 3, round = 2, part = "mu")
+
+
+# simulated residuals:
+plot(model_WARM_stim)
+
+save(list = "model_WARM_stim", file = paste0(here::here("Analysis","Models"),"/","model_WARM_stim.Rdata"), compress = TRUE)
+
+base::save(list = "stats_WARM_stim", file = here::here("Analysis","Temp", "reporting_statistics_stats_WARM_stim.RData"))
+
+```
+
+
+
+
+# Innocuous thermosensation is shaped by expectations
+
+```{r}
+## wrangling the data
+df_expectation <- df %>%
+  mutate(coldbeta = vasResp_1 / 100, warmbeta = vasResp_2 / 100) %>%
+  dplyr::select(predResp, coldbeta, vasRT_1, vasRT_2, trial, id, stim, warmbeta) %>%
+  drop_na() %>%
+  filter(predResp != "NaN") %>%
+  mutate(stim = as.factor(stim), id = as.factor(id), trial = scale(trial)[,1]) %>%
+  pivot_longer(cols = c("coldbeta", "warmbeta"), names_to = "Ratingscale") %>%
+  pivot_longer(cols = c("vasRT_1", "vasRT_2"), names_to = "Ratingscale_rt", values_to = "RT") %>%
+  mutate(RateCon = as.factor(ifelse(stim == "cold" &
+                                      Ratingscale == "coldbeta" | stim == "warm" &
+                                      Ratingscale == "warmbeta", "Con", "Incon"))) %>%
+  filter(stim != "TGI") %>%
+  mutate(predResp = as.factor(predResp)) %>%
+  filter(Ratingscale == "coldbeta" & Ratingscale_rt == "vasRT_1" | Ratingscale == "warmbeta" & Ratingscale_rt == "vasRT_2")
+
+
+
+# first getting the estimates for predicting warm, getting warm stimulus but rating in concurrently i.e. cold
+df_expectation$predResp <- relevel(df_expectation$predResp, ref = "warm")
+df_expectation$stim <- relevel(df_expectation$stim, ref = "warm")
+df_expectation$RateCon <- relevel(df_expectation$RateCon, ref = "Incon")
+
+model_INNOUOUS_expectation_warm_incon <- gamlss(value ~ RateCon * stim * predResp + trial + re(random = ~  stim | id),
+  nu.formula = ~ RateCon * stim * predResp + trial + re(random = ~ 1 | id),
+  tau.formula = ~ RateCon * stim * predResp + trial + re(random = ~ 1 | id),
+  sigma.formula = ~ RateCon * stim * predResp + trial + re(random = ~ 1 | id),
+  data = df_expectation,
+  family = BEINF(mu.link = "logit", sigma.link = "logit", nu.link = "logit", tau.link = "logit"),
+  control = gamlss.control(n.cyc = 100, trace = T)
+)
+
+
+stat_INNOUOUS_expectation_warm_incon_mu <- summary_stats_zoib_new(model_INNOUOUS_expectation_warm_incon, coefficients = 8, round = 2, part = "mu")
+
+plot(model_INNOUOUS_expectation_warm_incon)
+
+save(list = "model_INNOUOUS_expectation_warm_incon",
+     file = paste0(here::here("Analysis","Models"),"/","model_INNOUOUS_expectation_warm_incon.Rdata"), compress = TRUE)
+
+
+base::save(list = "stat_INNOUOUS_expectation_warm_incon_mu",
+           file = here::here("Analysis","Temp", "reporting_statistics_stat_INNOUOUS_expectation_warm_incon_mu.RData"))
+```
+
+
+# Reaction times and error rates reflect percieved TGI quality.
+
+```{r Accuracy on following trial given the percept of TGI and cue-contingency}
+df$predAcc2 <- lead(df$predAcc, 1)
+
+df_percieved_TGI_acc <- df %>%
+  group_by(stim, id, trial) %>%
+  summarize(coolness = vasResp_1 / (vasResp_1 + vasResp_2), warmness = vasResp_2 / (vasResp_1 + vasResp_2)) %>%
+  inner_join(df) %>%
+  mutate(stim = as.factor(stim), id = as.factor(id), desired_prob = as.factor(desired_prob), trial = scale(trial)[,1]) %>%
+  dplyr::select(predAcc2, coolness, cue, desired_prob, trial, id) %>%
+  filter(stim == "TGI", desired_prob != "0.5") %>%
+  mutate(predAcc2 = ifelse(predAcc2 == "Right", 1, 0), cue = as.factor(cue)) %>%
+  drop_na() %>%
+  mutate(contingency = as.factor(ifelse(desired_prob == "0.82" & cue == "high-tone" | desired_prob == "0.18" & cue == "low-tone", "Predicts cold", "Predicts warm")))
+
+
+df_percieved_TGI_acc$contingency <- relevel(df_percieved_TGI_acc$contingency, ref = "Predicts cold")
+
+model_percieved_TGI_acc_contingency_cold <- gamlss::gamlss(predAcc2 ~ coolness * contingency + trial + random(id),
+  family = BI(mu.link = "logit"),
+  control = gamlss.control(n.cyc = 100, trace = T),
+  data = df_percieved_TGI_acc
+)
+
+stats_percieved_TGI_acc_contingency_cold <- summary_stats_zoib_new(model_percieved_TGI_acc_contingency_cold, coefficients = 4, round = 2, part = "mu")
+
+
+plot(model_percieved_TGI_acc_contingency_cold)
+
+
+save(list = "model_percieved_TGI_acc_contingency_cold",
+     file = paste0(here::here("Analysis","Models"),"/","model_percieved_TGI_acc_contingency_cold.Rdata"), compress = TRUE)
+
+base::save(list = "stats_percieved_TGI_acc_contingency_cold",
+           file = here::here("Analysis","Temp", "reporting_statistics_stats_percieved_TGI_acc_contingency_cold.RData"))
+```
+
+# Computational Modeling
+
+In order to rerun the computational modeling make sure that you have the matlabr package installed and working such that you can run matlab scripts with the function run_matlab_script.
+
+Also please make sure you have Statistics and Machine Learning Toolbox installed for matlab for the model and parameter recovery
+
+The following function will rerun the parameter and model recovery of the computational modeling and save the results.
+```{r model and parameter recovery}
+parameter_model_recovery()
+```
+
+
+Here we either run the computational modeling using the HGF Toolbox as well as model comparison or load the resulting trial-wise dataframe from the HGF.
+
+```{r run or get hgf trajectories}
+trajfeel2 <- get_hgf(df, rerun = F)
+```
+
+
+# Predictions and perception were modulated by prediction uncertainty
+```{r Accuracy on HGF parameters}
+df_ACC_HGF = trajfeel2 %>% 
+  filter(stim != "TGI") %>% 
+  mutate(predAcc = ifelse(predAcc == "Right", 1, 0), trial = scale(trial)[,1]) %>% 
+  dplyr::select(stim,predAcc, trial,id,sa1hat)%>% 
+  drop_na()
+
+model_ACC_HGF <-  gamlss::gamlss(predAcc ~ sa1hat + trial + random(id),
+  family = BI(mu.link = "logit"),
+  control = gamlss.control(n.cyc = 100, trace = T),
+  data = df_ACC_HGF)
+
+
+stats_ACC_HGF <- summary_stats_zoib_new(model_ACC_HGF, coefficients = 2, round = 2, part = "mu")
+
+plot(model_ACC_HGF)
+
+save(list = "model_ACC_HGF",
+     file = paste0(here::here("Analysis","Models"),"/","model_ACC_HGF.Rdata"), compress = TRUE)
+
+
+base::save(list = "stats_ACC_HGF", file = here::here("Analysis","Temp", "reporting_statistics_stats_ACC_HGF.RData"))
+```
+
+
+```{r Prediction reaction time on HGF parameters}
+
+df_PRT_HGF = trajfeel2 %>% 
+  filter(predRT > 0.1) %>% 
+  dplyr::select(predRT,trial,id,sa1hat) %>% mutate(trial = scale(trial)[,1]) %>% 
+  drop_na()
+
+
+model_PRT_HGF <- gamlss::gamlss(predRT ~ sa1hat + trial + re(random = ~ 1 | id),
+                                     sigma.formula = ~  sa1hat + trial + re(random = ~ 1 | id),
+  control = gamlss.control(n.cyc = 100, trace = T),
+  family = GA(mu.link = "log"),
+  data = df_PRT_HGF
+)
+
+
+stats_PRT_HGF <- summary_stats_zoib_new(model_PRT_HGF, coefficients = 2, round = 2,part = "mu")
+
+plot(model_PRT_HGF)
+
+
+save(list = "model_PRT_HGF",
+     file = paste0(here::here("Analysis","Models"),"/","model_PRT_HGF.Rdata"), compress = TRUE)
+
+
+base::save(list = "stats_PRT_HGF", file = here::here("Analysis","Temp", "reporting_statistics_stats_PRT_HGF.RData"))
+
+```
+
+
+
+# Full model with burning ratings
+```{r}
+
+hgf_expectation_tgi <- trajfeel2 %>%
+  filter(stim != "NaN") %>%
+  mutate(coldbeta = vasResp_1 / 100, warmbeta = vasResp_2 / 100, burnbeta = vasResp_3 / 100) %>%
+  dplyr::select(stim, id, sa1hat, trial, coldbeta, warmbeta, burnbeta, cue, mu1hat) %>%
+  drop_na() %>%
+  mutate(stim = as.factor(stim), id = as.factor(id)) %>%
+  pivot_longer(cols = c("coldbeta", "warmbeta", "burnbeta"), names_to = "Ratingscale") %>%
+  mutate(belief_to_cold = ifelse(cue == "high-tone", mu1hat, 1 - mu1hat))%>% mutate(trial = scale(trial)[,1])
+
+
+hgf_expectation_tgi <- droplevels(hgf_expectation_tgi)
+hgf_expectation_tgi$Ratingscale <- as.factor(hgf_expectation_tgi$Ratingscale)
+hgf_expectation_tgi$Ratingscale <- relevel(hgf_expectation_tgi$Ratingscale, ref = "coldbeta")
+hgf_expectation_tgi$stim <- relevel(hgf_expectation_tgi$stim, ref = "cold")
+
+# stim_rating
+model_figure4_cold_cold <-  gamlss(value ~ belief_to_cold * Ratingscale * stim + trial + random(id),
+  nu.formula = ~ belief_to_cold * Ratingscale * stim+ trial + random(id),
+  tau.formula = ~ belief_to_cold * Ratingscale * stim+ trial + random(id),
+  sigma.formula = ~ belief_to_cold * Ratingscale * stim+ trial + random(id),
+  data = hgf_expectation_tgi,
+  family = BEINF(mu.link = "logit", sigma.link = "logit", nu.link = "logit", tau.link = "logit"),
+  control = gamlss.control(n.cyc = 100, trace = T)
+)
+
+save(list = "model_figure4_cold_cold",
+     file = paste0(here::here("Analysis","Models"),"/","model_figure4_cold_cold.Rdata"), compress = TRUE)
+
+# saving the model summary such that we can plot it manually the ggeffects package takes forever to compute:
+model = summary(model_figure4_cold_cold)
+
+write.csv(model, paste0(here::here("Analysis","Plotting"),"/summarystats_HGF_perception.csv"))
+
+
+stat_expectation_HGF_cold_cold <- summary_stats_zoib_new(model_figure4_cold_cold, coefficients = 18, round = 2, part = "mu")
+
+base::save(list = "stat_expectation_HGF_cold_cold",
+           file = here::here("Analysis","Temp", "reporting_statistics_stat_expectation_HGF_cold_cold.RData"))
+
+```
+
+
+# Individual differences in thermosensory learning and TGI sensitivity
+```{r Individual difference analysis on correlation between Sensitivity to TGI and Uncertainty modulation of the TGI}
+cordata <- trajfeel2 %>% pivot_longer(cols = c("vasResp_1", "vasResp_2", "vasResp_3"))
+cordata$name <- as.factor(cordata$name)
+
+cordata$name <- relevel(cordata$name, ref = "vasResp_1")
+
+cordata <- cordata %>%
+  filter(name == "vasResp_3") %>%
+  drop_na(name, value, stim, vasRT_3, trial, sa2, sa2hat) %>%
+  filter(stim != "NaN") %>%
+  dplyr::select(stim, id, sa2, sa2hat, trial, vasRT_3, name, value) %>% mutate(trial = scale(trial)[,1],
+                                                                               sa2 = scale(sa2)[,1])
+
+cordata$value <- cordata$value / 100
+cordata$id <- as.factor(cordata$id)
+cordata$stim <- as.factor(cordata$stim)
+cordata$name <- droplevels(cordata$name)
+cordata$stim <- relevel(cordata$stim, ref = "TGI")
+
+
+
+model_individual_dif_sa2_burn_HGF_sigma <- gamlss(value ~ sa2 * stim + trial + re(random = ~ stim:sa2 | id),
+  nu.formula = ~ sa2 * stim + trial + re(random = ~ 1 | id),
+  tau.formula = ~ sa2 * stim + trial + re(random = ~ 1 | id),
+  sigma.formula = ~ sa2 * stim + trial + re(random = ~ 1 | id),
+  data = cordata,
+  family = BEINF(mu.link = "logit", sigma.link = "logit", nu.link = "logit", tau.link = "logit"),
+  control = gamlss.control(n.cyc = 200, trace = T)
+)
+
+# saving the model summary such that we can plot it manually the ggeffects package does not like this way of wrting random effects:
+model = summary(model_individual_dif_sa2_burn_HGF_sigma)
+
+write.csv(model, paste0(here::here("Analysis","Plotting"),"/summarystats_umti.csv"))
+
+
+save(list = "model_individual_dif_sa2_burn_HGF_sigma",
+     file = paste0(here::here("Analysis","Models"),"/","model_individual_dif_sa2_burn_HGF_sigma.Rdata"), compress = TRUE)
+
+stats_sa2_burn_HGF_mu = summary_stats_zoib_new(model_individual_dif_sa2_burn_HGF_sigma, coefficients = 6, round = 2, part = "mu")
+
+base::save(list = "stats_sa2_burn_HGF_mu", file = here::here("Analysis","Temp", "reporting_statistics_stats_sa2_burn_HGF_mu.RData"))
+
+#remember to add the fixed effects to the differences.
+
+# extracting the coeficitents
+tgi_sa2 <- model_individual_dif_sa2_burn_HGF_sigma$mu.coefficients[2] + model_individual_dif_sa2_burn_HGF_sigma$mu.coefSmo[[1]]$coefficients[[2]][[1]][, 2]
+
+ids <- rownames(model_individual_dif_sa2_burn_HGF_sigma$mu.coefSmo[[1]]$coefficients[[2]]$id)
+
+cormat2 <- data.frame(tgi_sa2 = tgi_sa2, id = ids)
+
+
+# defining responders first by getting the individuals' burning ratings for all the different stimuli
+responders <- cordata %>%
+  filter(stim != "NaN") %>%
+  group_by(id, stim) %>%
+  summarize(meanburn = mean(value, na.rm = T))
+# want it in a wide format instead of long
+qqqq <- responders %>% pivot_wider(names_from = stim, values_from = meanburn)
+# define the responders as a continus variable that is defined as the burning rating on TGI minus the average burning rating on the cold and warm stimulus
+qqqq$max <- ifelse(qqqq$cold > qqqq$warm, qqqq$cold, qqqq$warm)
+
+
+qqqq$respondermax <- qqqq$TGI - qqqq$max
+
+
+
+# puts the responder variable into the dataframe with how much they are influenced by sa2hat on the different stimuli
+cormat2$respondermax <- qqqq$respondermax
+```
+
+
+# Methods
+
+```{r, fMRI analysis csv}
+#this is where we make the data for the hMRI (VBQ) analysis i.e. dataframe where the first column is id and the others are our variables of interrest.
+hgf_parm <- read_csv(here::here("matlab", "created files","decision_making_parameter_compar2.csv"), col_names = F)
+
+names(hgf_parm) <- c("omega", "zeta", "id")
+
+hgf_parm <- hgf_parm %>% mutate(id = as.factor(id))
+
+covariates <- data$thresholds %>%
+  mutate(id = as.factor(id)) %>%
+  group_by(id) %>%
+  summarize(age = age, gender = gender) %>%
+  distinct(id, .keep_all = TRUE)
+# 
+names(cormat2) <- c("beta_TGI", "id", "responsiveness")
+
+cormat2 <- cormat2 %>% mutate(id = as.factor(id))
+
+#cormat2 = cormat2 %>% filter(age != 621)
+
+fmri_data <- inner_join(covariates, hgf_parm) %>% inner_join(., cormat2) %>% filter(age != 0)
+ 
+write.csv(fmri_data, here::here("matlab", "VBQ", "fmri_data.csv"))
+```
+
+
+```{r}
+nf <- data$thresholds %>%
+  group_by(gender, id) %>%
+  summarize(n = n()) %>%
+  filter(gender == 1) %>%
+  mutate(females = length(gender))
+
+temps <- data$data %>%
+  group_by(id) %>%
+  summarize(maxw = max(targetT_1, na.rm = T), maxc = min(targetT_2, na.rm = T)) %>%
+  ungroup() %>%
+  summarize(meanw = mean(maxw), sdw = sd(maxw), meanc = mean(maxc), sdc = sd(maxc))
+
+nr <- length(unique(data[[3]]$id))
+np <- length(unique(data[[1]]$id))
+
+
+age <- data$data %>%
+  filter(age != 0) %>%
+  summarize(maxage = max(age, na.rm = T), minage = min(age, na.rm = T), meanage = mean(age, na.rm = T),sdage = sd(age, na.rm = T))
+
+
+ex_ids = read.csv(here::here("matlab","removers2.csv"))
+
+qq = data$thresholds %>% filter(!id %in% ex_ids$id)
+
+MRI_meanage_sdage = round(qq  %>% summarize(meanage = mean(age), sdage = sd(age)),1)
+
+MRI_nf = qq %>%
+  group_by(gender, id) %>%
+  summarize(n = n()) %>%
+  filter(gender == 1) %>%
+  mutate(females = length(gender))
+
+```
+
+
+
+<!-- Now we save the results for the manuscript!  -->
+
+```{r Running rest of the analysis for plots and reporting}
+get_all_stats_and_plots()
+```
+
+

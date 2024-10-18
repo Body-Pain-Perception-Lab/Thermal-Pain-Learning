@@ -1,0 +1,37 @@
+function plot_means_w3(u1, sim)
+subplot(3,3,1)
+omegat2 = pp_check_obs3(u1,sim,tapas_hgf_binary_pu_tgi_config_test_demo_t2, tapas_hgf_binary_pu_tgi_config_test_optimal)
+m1 = round(mean(omegat2),3)
+s1 = round(std(omegat2),3)
+title("2      "+"mean = "+ m1 + "              sd ="+ s1)
+
+subplot(3,3,2)
+omegat0 = pp_check_obs3(u1,sim,tapas_hgf_binary_pu_tgi_config_test_demo_t0, tapas_hgf_binary_pu_tgi_config_test_optimal)
+m1 = round(mean(omegat0),3)
+s1 = round(std(omegat0),3)
+title("0      "+"mean = "+ m1 + "              sd ="+ s1)
+
+subplot(3,3,3)
+omegatm2 = pp_check_obs3(u1,sim,tapas_hgf_binary_pu_tgi_config_test_demo_tm2, tapas_hgf_binary_pu_tgi_config_test_optimal)
+m1 = round(mean(omegatm2),3)
+s1 = round(std(omegatm2),3)
+title("-2      "+"mean = "+ m1 + "              sd ="+ s1)
+
+subplot(3,3,4)
+omegatm4 = pp_check_obs3(u1,sim,tapas_hgf_binary_pu_tgi_config_test_demo_tm4, tapas_hgf_binary_pu_tgi_config_test_optimal)
+m1 = round(mean(omegatm4),3)
+s1 = round(std(omegatm4),3)
+title("-4      "+"mean = "+ m1 + "              sd ="+ s1)
+
+subplot(3,3,5)
+omegatm6 = pp_check_obs3(u1,sim,tapas_hgf_binary_pu_tgi_config_test_demo_tm6, tapas_hgf_binary_pu_tgi_config_test_optimal)
+m1 = round(mean(omegatm6),3)
+s1 = round(std(omegatm6),3)
+title("-6      "+"mean = "+ m1 + "              sd ="+ s1)
+
+subplot(3,3,6)
+omegatm8 = pp_check_obs3(u1,sim,tapas_hgf_binary_pu_tgi_config_test_demo_tm8, tapas_hgf_binary_pu_tgi_config_test_optimal)
+m1 = round(mean(omegatm8),3)
+s1 = round(std(omegatm8),3)
+title("-8      "+"mean = "+ m1 + "              sd ="+ s1)
+

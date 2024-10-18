@@ -1,0 +1,298 @@
+---
+title: "Learning models"
+output: html_document
+date: "2024-08-17"
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load("renv", "here", "tidyverse","shiny","brms","patchwork")
+
+u = read.csv("Data/contingency1.csv")
+u = u$x
+```
+
+
+# This Markdown is made to give readers a more througough understanding of the computational learning model employed.
+
+
+All the learning models employed in the paper revolve around a belief about the contingency (association) between the tones (cues) and the stimulus presented in the study. we define 1 as the association between high-tones and cold stimuli (and therefore also low tones and warm stimuli). This also entails that 0 represents the association between low-tones and cold stimuli (and therefore also high tones and warm stimuli). This continuous variable of belief of the association, between cues and stimulus is what is captured by the learning models. Starting with the simplest learning model, the Rescorla wagner learning model:
+
+## Rescorla Wagner:
+
+In the Rescorla Wagner learning model subjects are updating their belief about the contingency based on the following equation: That posits that beliefs E are updated proportional to the prediction error $\delta$. where the proportionality constant $\alpha$ is the learning rate.
+
+$$
+E(t+1) = E(t) + \alpha \cdot \delta(t)
+$$
+
+where:
+$$
+\delta(t) = U(t) - E(t)
+$$
+
+Here U represents the actual cue-stimulus pairing on trial t.
+
+
+## Pearce hall
+
+The Pearce hall learning model extends the Rescorla wagner model, by not only keeping track of the belief of the association (i.e. the expectation) but also keeps track of the prediction error (called the associability which is conceptualized as the absolute value of the last prediction error $\delta(t-1)$).
+
+$$
+E(t+1) = E(t) + S * \delta(t) * |\delta(t-1)|
+$$
+
+
+## Sutton K1
+
+The Sutton K1 learning model revolves about tracking of 4 distinct entities; al, be, h and the expectation in the following manner.
+
+$$
+be(t+1) = be(t)+mu\cdot\delta(t)*h(t);
+$$
+$$
+al(t) =  exp(be(t+1))/(Rhat + exp(be(t+1)));
+$$
+$$
+h(t+1) = (h(t)+al(t)*da(t))*max((1-al(t)),0);
+$$
+$$
+E(t+1) = E(t) + al(t) * \delta(t)
+$$
+
+
+## Hierarchical Guassian filter:
+
+The HGF assumes that a latent expectation of the participant (on the 0-1 scale of the association), is governed by a higher level belief that is unconstrained. This higher level belief ($\mu_2$) governs the lower level by the inverse logit transformation. The higher level belief is then updated based on the prediction error from the lower level belief with the learning rate being the uncertainty ($\sigma_2$) of the higher level belief. The higher level belief can thus be thought as a gaussian random walk with mean $\mu_2$ and standard deviation $\sigma_2$. The update of these latent variables follows:
+
+$$
+\mu_2(t+1) = \mu_2(t) + \sigma_2(t) * \delta(t)
+$$
+where:
+$$
+E(t) = \frac{1}{1+exp(-\mu_2(t))}
+$$
+
+
+To fully understand the free parameters of the models, we provide a shiny app below to see what different free parameters entails for the learning trajectories and learning rates:
+
+
+```{r, echo = FALSE}
+
+logis_sigmoid = function(expect,zeta){
+  return(expect^zeta / (expect^zeta + (1-expect)^zeta))
+}
+get_hgf = function(u,e_0,zeta,omega,pi2_0){
+  
+  trial = length(u)
+  mu2 = array(NA, trial)
+  pi2 = array(NA, trial)
+  sa2 = array(NA, trial)
+  expect = array(NA, trial)
+  
+  mu2[1] = brms::logit_scaled(e_0)
+  pi2[1] = pi2_0
+  
+  for(i in 1:trial){
+    
+    expect[i] = brms::inv_logit_scaled(mu2[i])
+    sa2[i] = 1/pi2[i]
+    pi2[i+1] = (1/(1/pi2[i] + (omega))) + 1/(1/(expect[i] * (1 - expect[i])))
+    
+    mu2[i+1] = mu2[i]+(1/pi2[i])*(u[i]-expect[i])
+    
+  }
+  
+  resp = rbinom(length(expect),1,logis_sigmoid(expect,zeta))
+  data = data.frame(expect = expect, resp = resp) %>% mutate(omega = omega,pi2_0 = pi2_0, e_0 = e_0, zeta = zeta, model = "hgf") %>% 
+    mutate(trial = 1:n(), u = u, lr = sa2)
+  
+  return(data)
+}
+get_rw = function(u,e_0,zeta,alpha){
+  trial = length(u)
+  expect2 = array(NA, trial)
+  expect = array(NA, trial)
+  
+  expect[1] = (e_0)
+  
+  for(i in 1:trial){
+    expect2[i] = expect[i]
+    expect[i+1] = expect[i]+(alpha)*(u[i]-expect[i])
+  }
+  resp = rbinom(length(expect2),1,logis_sigmoid(expect2,zeta))
+  data = data.frame(expect = expect2, resp = resp) %>% mutate(alpha = alpha, e_0 = e_0, zeta = zeta, model = "rw") %>% 
+    mutate(trial = 1:n(), u = u,lr = alpha)
+  
+  
+  return(data)
+}
+get_ph = function(u,e_0,zeta,S,a_0){
+  trial = length(u)
+  expect = array(NA, trial)
+  expect2 = array(NA, trial)
+  
+  expect[1] = (e_0)
+  
+  for(i in 1:trial){
+    expect2[i] = expect[i]
+    if(i == 1){
+      expect[i+1] = expect[i]+(S)*(u[i]-expect[i]) * a_0
+    }else{
+      expect[i+1] = expect[i]+(S)*(u[i]-expect[i]) * abs((u[i-1] - expect[i-1]))
+    }
+  }
+  resp = rbinom(length(expect2),1,logis_sigmoid(expect2,zeta))
+  data = data.frame(expect = expect2, resp = resp) %>% mutate(S = S, a_0 = a_0, e_0 = e_0, zeta = zeta, model = "ph") %>% 
+    mutate(trial = 1:n(), u = u, lr = S*abs((u - expect)))
+  
+  return(data)
+}
+get_su1 = function(u,e_0,zeta,mu,Rhat,h_0){
+  
+  trial = length(u)
+  expect2 = array(NA, trial)
+  expect = array(NA, trial)
+  be = array(NA,trial)
+  al = array(NA,trial)
+  h = array(NA,trial)
+  
+  expect[1] = (e_0)
+  be[1] = log(Rhat)
+  h[1] = h_0
+  
+  for(i in 1:trial){
+    
+    expect2[i] = expect[i]
+    
+    be[i+1] = be[i] + mu * (u[i]-expect[i])*h[i]
+    al[i] = exp(be[i]) / (Rhat + exp(be[i]))
+    h[i+1] = (h[i] + al[i] * (u[i]-expect[i])) * max((1-al[i]),0)
+    
+    
+    expect[i+1] = expect[i] + al[i] * (u[i]-expect[i]);
+    
+  }
+  
+  
+  resp = rbinom(length(expect2),1,logis_sigmoid(expect2,zeta))
+  data = data.frame(expect = expect2, resp = resp) %>% mutate(mu = mu, Rhat = Rhat, h_0 = h_0, e_0 = e_0, zeta = zeta, model = "su1") %>% 
+    mutate(trial = 1:n(), u = u,lr = al)
+  
+  return(data)
+}
+
+
+
+
+make_plot = function(data, model_name){
+  
+  p1 = ggplot(data, aes(x = trial, y = expect)) +
+    geom_line() +
+    geom_point(aes(y = resp)) +
+    labs(x = "Trial", y = "Value", title = paste0(model_name," Plot")) +
+    theme_minimal()
+  
+  lr = ggplot(data, aes(x = trial, y = lr)) +
+    geom_line() +
+    labs(x = "Trial", y = "Value", title = ("Learning rate")) +
+    theme_minimal()
+  
+  return(p1/lr)
+  
+}
+
+
+trial = length(u)
+
+# Define UI for the application
+ui <- fluidPage(
+  
+  # Application title
+  titlePanel("Shiny App for the various learning models"),
+  
+  # Define a sidebar layout with input and output
+  sidebarLayout(
+    sidebarPanel(
+      # Navigation bar for different pages
+      navlistPanel(
+        id = "nav",  # Assign an ID to track the selected tab
+        "Learning models",
+        tabPanel("hgf", 
+                 sliderInput("e_0_hgf", "e_0", min = 0, max = 1, value = 0.5),
+                 sliderInput("zeta_hgf", "zeta", min = 0, max = 100, value = 10),
+                 sliderInput("omega_hgf", "omega", min = 0, max = 1.5, value = 0.5),
+                 sliderInput("pi2_0_hgf", "pi2_0", min = 0, max = 100, value = 0.5)
+        ),
+        tabPanel("rw", 
+                 sliderInput("e_0_rw", "e_0", min = 0, max = 1, value = 0.5),
+                 sliderInput("zeta_rw", "zeta", min = 0, max = 100, value = 10),
+                 sliderInput("alpha_rw", "alpha", min = 0, max = 1, value = 0.1)
+        ),
+        tabPanel("ph", 
+                 sliderInput("e_0_ph", "e_0", min = 0, max = 1, value = 0.5),
+                 sliderInput("zeta_ph", "zeta", min = 0, max = 100, value = 10),
+                 sliderInput("S_ph", "S", min = 0, max = 1, value = 0.1),
+                 sliderInput("a_0_ph", "a_0", min = 0, max = 1, value = 0.01)
+        ),
+        tabPanel("su1", 
+                 sliderInput("e_0_su1", "e_0", min = 0, max = 1, value = 0.5),
+                 sliderInput("zeta_su1", "zeta", min = 0, max = 100, value = 10),
+                 sliderInput("mu_su1", "mu", min = 0, max = 15, value = 0.1),
+                 sliderInput("Rhat_su1", "Rhat", min = 0, max = 1, value = 0.01),
+                 sliderInput("h_0_su1", "h_0", min = -10, max = 10, value = 0.1)
+        )
+      )
+    ),
+    
+    # Main panel for displaying outputs
+    mainPanel(
+      uiOutput("main_plot")
+    )
+  )
+)
+
+
+server <- function(input, output, session) {
+  
+  output$main_plot <- renderUI({
+    tab_name <- input$nav
+    plotOutput(tab_name)
+  })
+  
+  output$hgf <- renderPlot({
+    data <- get_hgf(u, input$e_0_hgf, input$zeta_hgf, input$omega_hgf, input$pi2_0_hgf)
+    
+    make_plot(data,"HGF")
+  })
+  
+  output$rw <- renderPlot({
+    data <- get_rw(u, input$e_0_rw, input$zeta_rw, input$alpha_rw)
+    
+    make_plot(data,"RW")
+    
+  })
+  
+  output$ph <- renderPlot({
+    data <- get_ph(u, input$e_0_ph, input$zeta_ph, input$S_ph,input$a_0_ph)
+    
+    make_plot(data,"ph")
+    
+  })
+  
+  output$su1 <- renderPlot({
+    data <- get_su1(u, input$e_0_su1, input$zeta_su1, input$mu_su1, input$Rhat_su1, input$h_0_su1)
+    
+    make_plot(data,"SU1")
+  })
+  
+}
+
+
+# Run the application 
+shinyApp(ui = ui, server = server,options = list(height = 1200, width = 1200))
+
+```
+
+
