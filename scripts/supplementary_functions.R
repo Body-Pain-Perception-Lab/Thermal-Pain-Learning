@@ -590,3 +590,19 @@ get_main_tables <- function(model, round = 2) {
   return(ft)
 }
 
+
+
+make_caption = function(table, path, caption){
+  
+  library(openxlsx)
+  # Load the workbook
+  wb <- loadWorkbook(path)
+  correct_sheet <- "feuille1"
+  
+  # Write the caption to a specific cell, e.g., A1
+  writeData(wb, correct_sheet, caption, startCol = 1, startRow = nrow(table$body$dataset)+2)
+  
+  # Save the updated workbook
+  saveWorkbook(wb, path, overwrite = TRUE)
+  
+}

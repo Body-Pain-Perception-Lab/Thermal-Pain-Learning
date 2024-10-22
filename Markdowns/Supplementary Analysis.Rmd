@@ -74,68 +74,68 @@ source(here::here("scripts","supplementary_functions.R"))
 table_pred_acc = get_main_tables(model_ER_expected,
           2)%>% 
       set_caption(caption = " ") %>%  #this is above the table
-  add_footer_lines("Table 1a, Main effect of expectation on predicting the next stimulus.") #this is below
+  add_footer_lines("Table S1, Main effect of expectation on predicting the next stimulus.") #this is below
 
 table_pred_RT = get_main_tables(model_PRT_expected,
           2)%>% 
       set_caption(caption = " ") %>%  #this is above the table
-  add_footer_lines("Table 1b, Main effect of expectation on Response time of the next stimulus.") #this is below
+  add_footer_lines("Table S2, Main effect of expectation on Response time of the next stimulus.") #this is below
 
 
 table_main_TGI = get_main_tables(model_BURN_stim,
           2)%>% 
       set_caption(caption = " ") %>%  #this is above the table
-  add_footer_lines("Table 2a, Main effect of stimulus on burning ratings.") #this is below
+  add_footer_lines("Table S3, Main effect of stimulus on burning ratings.") #this is below
 
 
 table_main_cold = get_main_tables(model_COLD_stim,
           2)%>% 
       set_caption(caption = " ") %>%  #this is above the table
-  add_footer_lines("Table 2b, Main effect of stimulus on cold ratings.") #this is below
+  add_footer_lines("Table S4, Main effect of stimulus on cold ratings.") #this is below
 
 
 table_main_warm = get_main_tables(model_WARM_stim,
           2)%>% 
       set_caption(caption = " ") %>%  #this is above the table
-  add_footer_lines("Table 2c, Main effect of stimulus on warm ratings.") #this is below
+  add_footer_lines("Table S5, Main effect of stimulus on warm ratings.") #this is below
 
 
 table_inncous_expect = get_main_tables(model_INNOUOUS_expectation_warm_incon,
          2)%>% 
       set_caption(caption = " ") %>%  #this is above the table
-  add_footer_lines("Table 2d, Expectation effect of thermosensory ratings.") #this is below
+  add_footer_lines("Table S6, Expectation effect of thermosensory ratings.") #this is below
 
 
 table_predacc_int = get_main_tables(model_percieved_TGI_acc_contingency_cold,
           2)%>% 
       set_caption(caption = " ") %>%  #this is above the table
-  add_footer_lines("Table 2e, Effect of percived TGI given contingency on accuracy on next trial") #this is below
+  add_footer_lines("Table S7 Effect of perceived TGI given contingency on accuracy on next trial") #this is below
 
 
 
 table_acc_hgf = get_main_tables(model_ACC_HGF,
           2)%>% 
       set_caption(caption = " ") %>%  #this is above the table
-  add_footer_lines("Table 3a, Effect of prediction uncertainty on accuracy on current trial") #this is below
+  add_footer_lines("Table S9, Effect of prediction uncertainty on accuracy on current trial") #this is below
 
 
 
 table_rt_hgf =get_main_tables(model_PRT_HGF,
           2)%>% 
       set_caption(caption = " ") %>%  #this is above the table
-  add_footer_lines("Table 3b, Effect of prediction uncertainty on prediction time on current trial") #this is below
+  add_footer_lines("Table S10, Effect of prediction uncertainty on prediction time on current trial") #this is below
 
 
 table_expectation_HGF = get_main_tables(model_figure4_cold_cold,
          2)%>% 
       set_caption(caption = " ") %>%  #this is above the table
-  add_footer_lines("Table 4a, Effect of belief that the next stimulus will be cold on thermosensory ratings") #this is below
+  add_footer_lines("Table S11, Effect of belief that the next stimulus will be cold on thermosensory ratings") #this is below
 
 
 table_sa2_burn_hgf  = get_main_tables(model_individual_dif_sa2_burn_HGF_sigma,
           2)%>% 
       set_caption(caption = " ") %>%  #this is above the table
-  add_footer_lines("Table 4c, Effect of estimation uncertainty given stimulus on burning ratings") #this is below
+  add_footer_lines("Table S12, Effect of estimation uncertainty given stimulus on burning ratings") #this is below
 
 ```
 
@@ -185,7 +185,7 @@ table_predrt_int <- get_main_tables(
   2
 ) %>%
   set_caption(caption = " ") %>% # this is above the table
-  add_footer_lines("Table 2f, Effect of percived TGI given contingency on prediction response time on next trial") # this is below
+  add_footer_lines("Table S8. Effect of perceived TGI given contingency on prediction response time on next trial") # this is below
 ```
 
 
