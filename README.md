@@ -1,4 +1,4 @@
-# Uncertainty in Thermosensory Expectations shapes an Illusion of Pain
+#  Thermosensory predictive coding underpins an illusion of pain
 
 ## Table of Contents
 1. [Introduction](#introduction)
