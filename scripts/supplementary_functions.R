@@ -360,7 +360,7 @@ get_model_comparison <- function() {
   
   
   #some renamning and tidying
-  modelcompar$model <- c("Hierarchical \nGaussian\nFilter(2-level)", "Rescorla\nWagner", "Sutton\nK1", "Pearce\nhall")
+  modelcompar$model <- c("Hierarchical \nGaussian\nFilter(2-level)", "Rescorla\nWagner", "Sutton\nK1", "Pearce\nHall")
   
   names(modelcompar)[1] <- "Model frequencies"
   names(modelcompar)[2] <- "Exceedance probability"
@@ -374,7 +374,7 @@ get_model_comparison <- function() {
   model_compar = ggplot(df, aes(x = model, y = value, fill = variable)) +
     geom_bar(stat = "identity", position = "dodge") +
     scale_y_continuous(name = "Model Frequency", sec.axis = sec_axis(~ . / 267, name = "Exceedance probability")) +
-    scale_fill_manual(values = c("#c44e52", "#5f9e6e")) +
+    scale_fill_manual(values = c("grey", "black")) +
     theme(axis.text.y = element_text(color = "red")) +
     guides(fill = guide_legend(override.aes = list(size = 8)))+
     theme(axis.title.x = element_blank())+
@@ -393,14 +393,14 @@ get_model_comparison <- function() {
           axis.title=element_text(size=font_size),
           axis.line=element_line(size=axis_width,colour = "black"),
           axis.ticks=element_line(size=axis_width),
-          axis.title.y = element_text(color = "#c44e52"),
-          axis.text.y = element_text(color = "#c44e52"),
-          axis.title.y.right = element_text(color = "#5f9e6e"),
-          axis.text.y.right = element_text(color = "#5f9e6e"))
+          axis.title.y = element_text(color = "grey"),
+          axis.text.y = element_text(color = "grey"),
+          axis.title.y.right = element_text(color = "black"),
+          axis.text.y.right = element_text(color = "black"))
   
+  model_compar
   
-  
-  return(model_compar)
+    return(model_compar)
   
   
 }
