@@ -37,9 +37,9 @@ lapply(required_packages, library, character.only = TRUE)
 detach("package:renv", unload = T)
 ```
 
-<a id="Supplementary_Results"></a>
+<a id="Supplementary_Note"></a>
 
-### **Supplementary Results**
+### **Supplementary Text**
 
 ```{r Load data,echo = FALSE}
 source(here::here("scripts","utils.R"))
@@ -50,20 +50,17 @@ base::load(here::here("Manuscripts", "Workspace", "reporting_statistics_suppleme
 base::load(here::here("Manuscripts","Workspace","tables_for_supplementary.RData"))
 ```
 
-We investigated how response times were affected in trials subsequent to a thermal grill stimulus. Our findings revealed a significant influence of the interaction between cue-stimulus association and participants' perception of TGI quality (`r make_new_reporting(stats_percieved_TGI_PRT_contingency_cold,number = 3, Z = F)`). Specifically,when there was a congruence between the predicted temperature (contingency) and the actual perceived TGI quality (e.g., anticipating cold and perceiving the TGI as predominantly cold), participants' response times on the trial following a TGI stimulus remained unchanged, indicating no post-TGI slowing (`r make_new_reporting(stats_percieved_TGI_PRT_contingency_cold,number = 1, Z = F)`). Conversely, when there was a mismatch between the predicted temperature and perceived TGI quality (for instance, expecting warm but perceiving TGI as predominantly cold), participants exhibited slower response times in the subsequent trial (`r make_new_reporting(stats_percieved_TGI_PRT_contingency_warm,number = 1, Z = F)`). Further details can be found in the supplementary tables.
+#### **Response times on thermal grill illusion trial**
 
-\newpage
+We investigated how response times were affected in trials subsequent to stimulation design to elicit the Thermal Grill Illusion (TGI). Our findings revealed a significant interaction between cue-stimulus predictions (i.e., whether the participant expected a cold or warm stimulus next) and participants’ perception of TGI quality (i.e., whether the participant experienced the illusion as cold or warm) (`r make_new_reporting(stats_percieved_TGI_PRT_contingency_cold,number = 3, Z = F)`). Specifically, when there was a congruence between the predicted temperature (contingency) and the actual perceived TGI quality (e.g., anticipating cold and perceiving the TGI as predominantly cold), participants’ response times on the trial following a TGI stimulus remained unchanged, indicating no post-TGI slowing (`r make_new_reporting(stats_percieved_TGI_PRT_contingency_cold,number = 1, Z = F)`). Conversely, when there was a mismatch between the predicted temperature and perceived TGI quality (for instance, expecting warm but perceiving TGI as predominantly cold), participants exhibited slower response times in the subsequent trial (`r make_new_reporting(stats_percieved_TGI_PRT_contingency_warm,number = 1, Z = F)`). Further details can be found in the supplementary table 8.
 
-
-### **Supplementary Note**
-
-<a id="Supplementary Note"></a>
 
 #### **Formulation of reported models**
 
-We analyzed three types of responses: (1) binary choices, which determined if a participant predicted a cold or a warm stimulus, (2) response times associated with these binary choices and (3) VAS ratings, which reflected how a received stimulus was perceived by a participant. Here, we detail the  probability distribution of each response type, as well as the parameters upon which our regression analysis is based.
+We analyzed three types of responses: (1) binary choices, which determined if a participant predicted a cold or a warm stimulus, (2) response times associated with these binary choices and (3) Visual Analog Scale (VAS) ratings, reflecting the perceived intensity of cold, warm, and burning sensations. In this section, we present the probability distributions for each response type, along with the parameters used in our regression analysis.
 
 To analyze the binary choices, we used the binomial distribution which is given by:
+
 $$
 f(y|\mu)=\frac{\Gamma(n+1)}{\Gamma(y+1) \Gamma{(n-y+1)}} \mu^y (1-\mu)^{(n-y)}
 $$
@@ -72,6 +69,7 @@ Where $\Gamma$ is the gamma function, y is the random variable of n successes (r
 <br>
 
 To analyze  response times, we used the gamma distribution given by:
+
 $$
 f(y|\mu,\sigma)=\frac{y^{(1/\sigma^2-1)}e^{[-y/(\sigma^2 \mu)]}}{(\sigma^2 \mu)^{(1/\sigma^2)} \Gamma(1/\sigma^2)}
 $$
@@ -115,8 +113,6 @@ $$
 $$ 
 where $p_2 = 1-p_0-p_1$. All these given parameters $\mu$, $\sigma$, $\tau$ and $\nu$ are restricted between 0 and 1, and are modelled using the logit link function.
 
-\newpage
-
 #### **Formulation of the Uncertainty Modulation of TGI Index**
 
 To provide a thorough understanding of the subject specific Uncertainty Modulation index parameter (UMTI), here we present the detailed mathematical formulation of the model. This formulation is written using the lmer syntax, as detailed below.
@@ -128,6 +124,7 @@ $$
 family = beinf(\mu_i,\tau_i,\nu_i,\kappa)
 $$
 Considering the number of parameters that have been parameterized, our primary focus in this section is on the mean. However, it is important to note that this approach is equally applicable to the parameters representing the proportion of ones and zeros (i.e., $\nu$ & $\tau$). The mathematical description, specifically tailored to address only the mean, is as follows:
+
 $$
 Burning_i \sim beinf(\mu_i,\tau,\nu,\kappa)
 $$
@@ -168,6 +165,15 @@ $$
 In this analysis, the parameter estimate of interest (i.e., UMTI) is $\beta_{3_j}$, which is the beta estimate for the j-th participant ID. This estimate specifically denotes the interaction term, which quantifies the degree to which estimation uncertainty influences the participant's response to the TGI , compared to their response to cold and warm stimuli. Positive values of $\beta_{3_j}$ suggest that a participant exhibits an increased tendency to rate the sensation as more 'burning' under TGI stimulus conditions, relative to either cold or warm stimuli, as estimation uncertainty increases. It is important to note that this effect is distinct from the direct stimulus effect of the TGI; it represents the differential impact of estimation uncertainty on burning ratings across stimulus types.
 
 \newpage
+
+
+#### **Multi-Parameter Mapping**
+
+In our initial analysis, we identified correlations between multi-parameter maps and the computational parameters of interest using a traditional cluster-based inference approach. This approach applied a family-wise error (FWE) cluster-corrected threshold of p < 0.025 (Bonferroni-corrected for two one-tailed tests), with an inclusion threshold of p < 0.001 (uncorrected) within the gray matter mask. The regression model included the computational parameters omega, zeta, and UMTI, along with age, gender, and total intracranial volume (TIV) as nuisance covariates. These results were initially reported in the preprint version of the manuscript (version 1) and are available online (link to be provided).
+
+In response to a reviewer’s suggestion, we updated the model to include TGI responsiveness as an additional regressor of interest. For this updated analysis, we performed both the original traditional cluster-based inference and Threshold-Free Cluster Enhancement (TFCE). Given that TFCE offers key advantages over traditional methods—such as enhanced sensitivity to subtle effects and the avoidance of arbitrary cluster-forming thresholds—we updated the main manuscript’s methods and results sections to reflect the findings obtained using TFCE. Nevertheless, for completeness and comparison, we also provide the results from the traditional cluster-based inference method.
+
+
 <!-- ### **Supplementary Table**  -->
 
 <!-- #### **Error rates for expectedness of stimulus** {#Table_1a} -->
@@ -359,21 +365,16 @@ make_caption(table_sa2_burn_hgf,path_S12,caption_S12)
 ```
 
 
-### **Multi-Parameter Mapping**
-
-In our initial analysis, we identified correlations between multi-parameter maps and the computational parameters of interest using a traditional cluster-based inference approach. This approach applied a family-wise error (FWE) cluster-corrected threshold of p < 0.025 (Bonferroni-corrected for two one-tailed tests), with an inclusion threshold of p < 0.001 (uncorrected) within the gray matter mask. The regression model included the computational parameters omega, zeta, and UMTI, along with age, gender, and total intracranial volume (TIV) as nuisance covariates. These results were initially reported in the preprint version of the manuscript (version 1) and are available online (link to be provided).
-
-In response to a reviewer’s suggestion, we updated the model to include TGI responsiveness as an additional regressor of interest. For this updated analysis, we performed both the original traditional cluster-based inference and Threshold-Free Cluster Enhancement (TFCE). Given that TFCE offers key advantages over traditional methods—such as enhanced sensitivity to subtle effects and the avoidance of arbitrary cluster-forming thresholds—we updated the main manuscript’s methods and results sections to reflect the findings obtained using TFCE. Nevertheless, for completeness and comparison, we also provide the results from the traditional cluster-based inference method in an online repository (link to be provided).
 
 
 \newpage
 
 
-### **Supplementary Figures**{#Supplementary_Figures_1_8}
+#### **parameter recovery**{#Supplementary_Figures_1_8}
 
-To ensure the robustness of our models, we conducted parameter recovery analysis. This analysis revealed that the 3-level Hierarchical Gaussian Filter model and the modified Pearce Hall model could not adequately recover all the parameters governing the learning trajectories. Consequently, these models were not included in neither model comparison nor model selection.
+To ensure the robustness of our models, we conducted parameter recovery analysis. This analysis revealed that the three-level Hierarchical Gaussian Filter model and the modified Pearce Hall model could not adequately recover all the parameters governing the learning trajectories. Consequently, these models were not included in neither model comparison nor model selection.
 
-The parameter recovery analysis demonstrated that the 2-level HGF, the Rescorla Wagner, the Sutton k1 and the pearce hall learning models successfully recovered their respective parameters with acceptable precision. However, the 3-level HGF and the modified pearce hall failed to recover particular parameters, making it unsuitable for further analysis in this context. The outcomes of the parameter recovery were then utilized to establish suitable priors for subsequent model recovery analyses. For further details, including comprehensive plots that illustrate the evaluation of the priors used in our simulations, readers are directed to the [Shiny app](#https://github.com/Body-Pain-Perception-Lab/Thermal-Pain-Learning/tree/main/Shiny) in the GitHub repository linked to this study.
+The parameter recovery analysis demonstrated that the two-level HGF, the Rescorla Wagner, the Sutton k1 and the pearce hall learning models successfully recovered their respective parameters with acceptable precision. However, the three-level HGF and the modified pearce hall failed to recover particular parameters, making it unsuitable for further analysis in this context. The outcomes of the parameter recovery were then utilized to establish suitable priors for subsequent model recovery analyses. For further details, including comprehensive plots that illustrate the evaluation of the priors used in our simulations, readers are directed to the [Shiny app](#https://github.com/Body-Pain-Perception-Lab/Thermal-Pain-Learning/tree/main/Shiny) in the GitHub repository linked to this study.
 
 Note we display $\mathcal{N}(\mu,\sigma^2)$ as the HGF toolbox. All parameters were simulated from a uniform distribution in the range seen in the plot below. Note the parameter-recovery figures for $\zeta$ are cropped at y = 30, Few simulations estimated $\zeta$ to values above 50 which are not shown in the scatter plot, but included in the correlation coefficient reported in the figure. Priors for each of the models were transformed to obey their constraints, meaning that parameters on the unit interval where sigmoid transformed and positively constrained parameters exponentiated.
 
