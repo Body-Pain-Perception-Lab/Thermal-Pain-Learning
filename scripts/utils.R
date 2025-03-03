@@ -269,15 +269,25 @@ make_new_reporting = function(stats, number, Z, inc_df = F){
     beta_stat = stats$beta[number]
     t_stat = stats$stat[number]
     p_value = stats$p[number]
-    ci = list(low = stats$CI_low[number], high = stats$CI_high[number])
     df = stats$df[number]
-    if(inc_df){
-      text = paste0("$\\", "beta", "$"," = ",beta_stat, ", 95% CI = [", ci$low, "; ", ci$high,"]",", t(",df,") = ",t_stat,", ",make_pvalue(p_value))
-    }else{
-      text = paste0("$\\", "beta", "$"," = ",beta_stat, ", 95% CI = [", ci$low, "; ", ci$high,"]",", ",make_pvalue(p_value))
-      
-    }
+    ci = list(low = stats$CI_low[number], high = stats$CI_high[number])
     
+    if(str_count(ci$low) == 3){
+      if(inc_df){
+        text = paste0("$\\", "beta", "$"," = ",beta_stat, ", 95% CI = [", ci$low,"0", "; ", ci$high,"]",", t(",df,") = ",t_stat,", ",make_pvalue(p_value))
+      }else{
+        text = paste0("$\\", "beta", "$"," = ",beta_stat, ", 95% CI = [", ci$low,"0", "; ", ci$high,"]",", ",make_pvalue(p_value))
+        
+      }
+    }else if(str_count(ci$low) != 3){
+      
+      if(inc_df){
+        text = paste0("$\\", "beta", "$"," = ",beta_stat, ", 95% CI = [", ci$low, "; ", ci$high,"]",", t(",df,") = ",t_stat,", ",make_pvalue(p_value))
+      }else{
+        text = paste0("$\\", "beta", "$"," = ",beta_stat, ", 95% CI = [", ci$low, "; ", ci$high,"]",", ",make_pvalue(p_value))
+        
+      }
+    }
     return(text)
     
   }

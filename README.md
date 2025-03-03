@@ -38,6 +38,12 @@ Thermal Pain Learning/
 │   ├── plots.Rmd                     # Rmarkdown for the plots used in the manuscript.
 │   └── Control analyses.Rmd          # Rmarkdown for the control analyses done.
 │
+├── Analysis/            # Folder containing R objects for fitted models.
+│   ├── Analysis.Rmd                  # Rmarkdown for for running the main analyses in the manuscript.
+│   ├── Supplementary Analysis.Rmd    # Rmarkdown for the supplementary analyses in the manuscript.
+│   ├── plots.Rmd                     # Rmarkdown for the plots used in the manuscript.
+│   └── Control analyses.Rmd          # Rmarkdown for the control analyses done.
+│
 │
 ├── Pictures/             # External pictures used to produce the final figures for the manuscript.
 │   └── ... 
